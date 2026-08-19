@@ -1,0 +1,136 @@
+---
+import BaseMinimal from "../../layouts/BaseMinimal.astro";
+import { ANALYTICS_DOMAIN, contactEmailWithTag } from "../../lib/config";
+
+const privacyEmail = contactEmailWithTag("privacy");
+---
+
+<BaseMinimal
+  title="Privacy Policy"
+  description="Privacy policy for the Dolmenwood Hex Map"
+>
+  <style is:inline>
+    body {
+      background: #d5e3cc;
+      margin: 0;
+      font:
+        15px/1.6 system-ui,
+        sans-serif;
+      color: #4a3c2a;
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #2c1e0e;
+      margin: 0 0 8px;
+    }
+
+    .date {
+      font-size: 12px;
+      color: #5c4e3a;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-size: 17px;
+      color: #2c1e0e;
+      margin: 28px 0 8px;
+    }
+
+    p,
+    ul {
+      margin: 0 0 12px;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin-bottom: 4px;
+    }
+
+    a {
+      color: #7a5232;
+    }
+
+    .back {
+      margin-top: 40px;
+      font-size: 13px;
+    }
+
+    .back a {
+      color: #5c4e3a;
+    }
+  </style>
+  <main>
+    <h1>Privacy Policy</h1>
+    <p class="date">Last updated: February 22, 2026</p>
+
+    <h2>What we collect</h2>
+    <p>
+      When you sign in via Discord or Google on the Dolmenwood Hex Map, we
+      store:
+    </p>
+    <ul>
+      <li>Your account identifier (provided by Discord or Google)</li>
+      <li>Your display name and email (used to show who's signed in)</li>
+      <li>
+        Your map data: explored hexes, referee notes, and preferences — so you
+        can sync across devices
+      </li>
+    </ul>
+
+    <h2>What we don't collect</h2>
+    <ul>
+      <li>No tracking cookies beyond basic anonymous analytics</li>
+      <li>No data is sold or shared with third parties</li>
+      <li>No advertising</li>
+    </ul>
+
+    <h2>Where data is stored</h2>
+    <p>
+      Map data is stored in a Supabase-hosted PostgreSQL database. Your data is
+      only accessible to your authenticated account via row-level security
+      policies.
+    </p>
+
+    <h2>Data deletion</h2>
+    <p>
+      You can stop using cloud sync at any time by signing out.{" "}
+      {
+        privacyEmail ? (
+          <>
+            To request deletion of your data, email{" "}
+            <a href={`mailto:${privacyEmail}`}>{privacyEmail}</a>.
+          </>
+        ) : (
+          <>To request deletion of your data, contact the site operator.</>
+        )
+      }
+    </p>
+
+    {
+      ANALYTICS_DOMAIN && (
+        <>
+          <h2>Analytics</h2>
+          <p>
+            We use <a href="https://onedollarstats.com">OneDollarStats</a> for
+            anonymous, cookie-free page view analytics. No personal information
+            is collected by the analytics service.
+          </p>
+        </>
+      )
+    }
+
+    <p class="back">
+      <a href="./">&larr; Back to the map</a>
+    </p>
+  </main>
+</BaseMinimal>

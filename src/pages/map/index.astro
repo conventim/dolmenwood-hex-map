@@ -1,0 +1,3759 @@
+---
+import Base from "../../layouts/BaseMinimal.astro";
+import { modules } from "../../data/dolmenwood-map-modules";
+import { pois } from "../../data/map-pois";
+import { updates } from "../../data/map-updates";
+import { marked } from "marked";
+import hexColors from "../../data/hex-colors.json";
+import hexPages from "../../data/hex-pages.json";
+import { addAbbrTags, linkifyHexRefs } from "../../lib/map/text-transforms";
+import { CANONICAL_URL, contactEmailWithTag } from "../../lib/config";
+
+interface ModuleLink {
+  label: string;
+  url: string;
+}
+
+interface ModuleInfo {
+  name: string;
+  levels: string;
+  official: boolean;
+  ose: boolean;
+  descriptionHtml: string;
+  estimated: boolean;
+  links: ModuleLink[];
+}
+
+// Build hex-indexed lookup: Record<string, ModuleInfo[]>
+const hexModules: Record<string, ModuleInfo[]> = {};
+for (const mod of modules) {
+  if (!("hexes" in mod)) continue;
+  const descHtml = addAbbrTags(await marked(mod.description));
+  for (const hex of mod.hexes) {
+    const estimated = !new RegExp(`\\b${hex}\\b`).test(mod.location);
+    const info: ModuleInfo = {
+      name: mod.name,
+      levels: mod.levels,
+      official: mod.official,
+      ose: mod.ose,
+      descriptionHtml: descHtml,
+      estimated,
+      links: mod.links,
+    };
+    if (!hexModules[hex]) hexModules[hex] = [];
+    hexModules[hex].push(info);
+  }
+}
+
+interface PoiInfo {
+  name: string;
+  category: string;
+}
+
+const hexPois: Record<string, PoiInfo[]> = {};
+for (const poi of pois) {
+  const info: PoiInfo = {
+    name: poi.name,
+    category: poi.category,
+  };
+  if (!hexPois[poi.hex]) hexPois[poi.hex] = [];
+  hexPois[poi.hex].push(info);
+}
+
+const modulesJson = JSON.stringify(hexModules);
+const poisJson = JSON.stringify(hexPois);
+const hexColorsJson = JSON.stringify(hexColors);
+const hexPagesJson = JSON.stringify(hexPages);
+const updatesJson = JSON.stringify(updates);
+
+// Build array of modules without hex associations (for search)
+const locationModules = await Promise.all(
+  modules
+    .filter((mod) => !("hexes" in mod))
+    .map(async (mod) => ({
+      name: mod.name,
+      location: mod.location,
+      descriptionHtml: addAbbrTags(await marked(mod.description)),
+    })),
+);
+const locationModulesJson = JSON.stringify(locationModules);
+
+// Build sorted adventure list for below-map display
+interface AdventureEntry {
+  name: string;
+  levels: string;
+  location: string;
+  locationHtml: string;
+  official: boolean;
+  ose: boolean;
+  hexes: string[];
+  descriptionHtml: string;
+  links: ModuleLink[];
+}
+
+const adventureList: AdventureEntry[] = await Promise.all(
+  modules.map(async (mod) => ({
+    name: mod.name,
+    levels: mod.levels,
+    location: mod.location,
+    locationHtml: linkifyHexRefs(mod.location),
+    official: mod.official,
+    ose: mod.ose,
+    hexes: "hexes" in mod ? [...mod.hexes] : [],
+    descriptionHtml: linkifyHexRefs(addAbbrTags(await marked(mod.description))),
+    links: mod.links,
+  })),
+);
+
+adventureList.sort((a, b) =>
+  a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+);
+
+const contactMailto = contactEmailWithTag("dolmenwood-map");
+---
+
+<Base
+  title="Dolmenwood Hex Map"
+  description="Interactive hex map of Dolmenwood with module hex annotations - Find your next adventure."
+  ogImage="/map/images/map-og.jpg"
+  canonicalUrl={CANONICAL_URL || undefined}
+>
+  <style is:inline>
+    /* Theme custom properties — organic earth-tone palette */
+    :root {
+      --map-body-bg: #d5e3cc;
+      --sidebar-bg: #faf7f0;
+      --sidebar-text: #4a3c2a;
+      --sidebar-heading: #2c1e0e;
+      --sidebar-border: #d6c9ad;
+      --sidebar-link: #7a5232;
+      --sidebar-levels: #5c4e3a;
+      --sidebar-desc: #5c4e3a;
+      --sidebar-close: #a89880;
+      --sidebar-close-hover: #3b2c1a;
+      --sidebar-shadow: rgb(60 40 20 / 12%);
+      --tooltip-bg: #fffdf7;
+      --tooltip-text: #4a3c2a;
+      --tooltip-name: #2c1e0e;
+      --tooltip-level: #5c4e3a;
+      --tooltip-shadow: rgb(60 40 20 / 12%);
+      --toggle-bg: #ddd1b8;
+      --toggle-text: #4a3c2a;
+      --toggle-hover: #cec0a4;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      /* stylelint-disable-next-line property-no-deprecated -- fallback for older browsers */
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--map-body-bg) !important;
+      color: unset;
+    }
+
+    main {
+      width: 100%;
+      height: 100%;
+    }
+
+    #map-container {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      box-sizing: border-box;
+      transition: width 0.3s ease;
+    }
+
+    body.sidebar-open #map-container {
+      width: calc(100% - 400px);
+    }
+
+    #map {
+      display: block;
+      margin-top: 50px;
+    }
+
+    /* Tooltip */
+    #tooltip {
+      display: none;
+      position: fixed;
+      background: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font:
+        14px/1.4 system-ui,
+        sans-serif;
+      pointer-events: none;
+      z-index: 1000;
+      max-width: 300px;
+      box-shadow: 0 2px 8px var(--tooltip-shadow);
+    }
+
+    #tooltip .tt-name {
+      font-weight: 600;
+      color: var(--tooltip-name);
+    }
+
+    #tooltip .tt-level {
+      color: var(--tooltip-level);
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 400px;
+      height: 100%;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 900;
+      overflow-y: auto;
+      font:
+        15px/1.6 system-ui,
+        sans-serif;
+      box-shadow: -2px 0 12px var(--sidebar-shadow);
+    }
+
+    #sidebar.open {
+      transform: translateX(0);
+    }
+
+    #sidebar:focus {
+      outline: none;
+    }
+
+    #sidebar-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--sidebar-border);
+      position: sticky;
+      top: 0;
+      background: var(--sidebar-bg);
+    }
+
+    #sidebar-header .header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #sidebar-header h2 {
+      font-size: 20px;
+      color: var(--sidebar-heading);
+      margin: 0;
+      display: flex;
+      gap: 16px;
+      align-items: baseline;
+    }
+
+    #sidebar-close {
+      background: none;
+      border: none;
+      color: var(--sidebar-close);
+      font-size: 28px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    #sidebar-close:hover {
+      color: var(--sidebar-close-hover);
+    }
+
+    #sidebar-content {
+      padding: 20px;
+    }
+
+    #sidebar-content .module {
+      margin-bottom: 24px;
+    }
+
+    #sidebar-content .module h3 {
+      margin: 0 0 8px;
+    }
+
+    #sidebar-content .module h3 a {
+      color: var(--sidebar-link);
+      text-decoration: none;
+    }
+
+    #sidebar-content .module h3 a:hover {
+      text-decoration: underline;
+    }
+
+    #sidebar-content .module-levels {
+      color: var(--sidebar-levels);
+    }
+
+    #sidebar-content .module-desc p {
+      color: var(--sidebar-desc);
+      margin: 0 0 12px;
+    }
+
+    #sidebar-content .module-desc p:last-child {
+      margin-bottom: 0;
+    }
+
+    #sidebar-content .module-desc a {
+      color: var(--sidebar-link);
+    }
+
+    #sidebar-content .module-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    #sidebar-content .module-links a {
+      color: var(--sidebar-link);
+    }
+
+    /* DM Notes */
+    .notes-section {
+      border-bottom: 1px solid var(--sidebar-border);
+      padding: 12px 16px;
+    }
+
+    .notes-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .notes-header h3 {
+      margin: 0;
+      font-size: 14px;
+      color: var(--sidebar-heading);
+      font-weight: 600;
+    }
+
+    .notes-header button {
+      background: none;
+      border: none;
+      color: var(--sidebar-levels);
+      cursor: pointer;
+      padding: 2px 6px;
+      font-size: 14px;
+      border-radius: 3px;
+    }
+
+    .notes-header button:hover {
+      background: rgb(255 255 255 / 10%);
+    }
+
+    .notes-view {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--sidebar-desc);
+      overflow-wrap: break-word;
+    }
+
+    .notes-view h1,
+    .notes-view h2,
+    .notes-view h3,
+    .notes-view h4 {
+      color: var(--sidebar-heading);
+      margin: 12px 0 4px;
+      font-size: 14px;
+    }
+
+    .notes-view h1 {
+      font-size: 16px;
+    }
+
+    .notes-view h2 {
+      font-size: 15px;
+    }
+
+    .notes-view p {
+      margin: 0 0 8px;
+    }
+
+    .notes-view ul,
+    .notes-view ol {
+      margin: 0 0 8px;
+      padding-left: 20px;
+    }
+
+    .notes-view code {
+      background: rgb(255 255 255 / 8%);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    .notes-view pre {
+      background: rgb(255 255 255 / 6%);
+      padding: 8px;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 0 0 8px;
+    }
+
+    .notes-view pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .notes-view a {
+      color: var(--sidebar-link);
+    }
+
+    .notes-view hr {
+      border: none;
+      border-top: 1px solid var(--sidebar-border);
+      margin: 8px 0;
+    }
+
+    .notes-textarea {
+      width: 100%;
+      min-height: 120px;
+      background: rgb(255 255 255 / 6%);
+      color: var(--sidebar-heading);
+      border: 1px solid var(--sidebar-border);
+      border-radius: 4px;
+      padding: 8px;
+      font:
+        13px/1.4 "SF Mono",
+        "Fira Code",
+        "Fira Mono",
+        Menlo,
+        monospace;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+
+    .notes-textarea:focus {
+      outline: none;
+      border-color: #2d6a4f;
+    }
+
+    .notes-hint {
+      font-size: 11px;
+      color: var(--sidebar-levels);
+      margin: 4px 0 0;
+    }
+
+    .notes-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .notes-actions button {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+      border: 1px solid var(--sidebar-border);
+      background: rgb(255 255 255 / 8%);
+      color: var(--sidebar-heading);
+    }
+
+    .notes-actions button:first-child {
+      background: #2d6a4f;
+      border-color: #2d6a4f;
+      color: #fff;
+    }
+
+    .notes-actions button:hover {
+      opacity: 0.85;
+    }
+
+    .notes-add-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: none;
+      border: 1px dashed var(--sidebar-border);
+      border-radius: 4px;
+      color: var(--sidebar-levels);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .notes-add-btn:hover {
+      border-color: var(--sidebar-heading);
+      color: var(--sidebar-heading);
+    }
+
+    abbr[data-tooltip] {
+      text-decoration: underline dotted;
+    }
+
+    [data-tooltip] {
+      cursor: help;
+    }
+
+    #attr-tooltip {
+      display: none;
+      position: fixed;
+      padding: 4px 8px;
+      background: var(--tooltip-bg);
+      color: var(--tooltip-text);
+      font:
+        14px/1.4 system-ui,
+        sans-serif;
+      max-width: 300px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px var(--tooltip-shadow);
+      pointer-events: none;
+      z-index: 1001;
+    }
+
+    /* DCB page reference (inline with title) */
+    #sidebar-header .hex-page-ref {
+      color: var(--sidebar-levels);
+      font-size: 13px;
+      font-weight: normal;
+      margin-left: 8px;
+    }
+
+    /* POI sidebar entries */
+    #sidebar-header .poi {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    #sidebar-header .poi h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: normal;
+      color: var(--sidebar-heading);
+    }
+
+    #sidebar-header .poi-meta {
+      color: var(--sidebar-levels);
+      font-size: 13px;
+    }
+
+    /* Tooltip category label */
+    #tooltip .tt-cat {
+      color: var(--tooltip-level);
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    /* Exploration state in tooltip */
+    #tooltip .tt-state {
+      color: var(--sidebar-levels);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    /* Exploration state in sidebar */
+    #sidebar-exploration {
+      margin-top: 6px;
+    }
+
+    #sidebar-exploration .exploration-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+
+    #sidebar-exploration .exploration-badge.partial {
+      background: rgb(80 180 170 / 15%);
+      color: rgb(80 180 170 / 100%);
+    }
+
+    #sidebar-exploration .exploration-badge.visited {
+      background: rgb(160 160 160 / 15%);
+      color: rgb(120 120 120 / 100%);
+    }
+
+    /* Top controls (hex search + modules link) */
+    #top-controls {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      z-index: 950;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #search-container {
+      position: relative;
+    }
+
+    #hex-search {
+      width: 240px;
+      padding: 8px 12px;
+      padding-left: 12px;
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      border: none;
+      border-radius: 20px;
+      font:
+        14px/1 system-ui,
+        sans-serif;
+      text-align: left;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+      outline: none;
+      box-sizing: border-box;
+    }
+
+    #hex-search[aria-expanded="true"] {
+      border-radius: 12px 12px 0 0;
+    }
+
+    #search-results {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      max-height: 320px;
+      overflow-y: auto;
+      z-index: 960;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 25%);
+    }
+
+    #search-results[data-open="true"] {
+      display: block;
+    }
+
+    #search-results li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font:
+        13px/1.3 system-ui,
+        sans-serif;
+    }
+
+    #search-results li:last-child {
+      border-radius: 0 0 12px 12px;
+    }
+
+    #search-results li[aria-selected="true"] {
+      background: var(--toggle-bg);
+    }
+
+    #search-results li:hover {
+      background: var(--toggle-hover);
+    }
+
+    #search-results .sr-badge {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: var(--sidebar-border);
+      color: var(--sidebar-heading);
+    }
+
+    #search-results .sr-label {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #search-results .sr-hex {
+      flex-shrink: 0;
+      font-size: 12px;
+      color: var(--sidebar-levels);
+      font-variant-numeric: tabular-nums;
+    }
+
+    #see-modules {
+      font:
+        13px/1 system-ui,
+        sans-serif;
+      color: var(--sidebar-levels);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    #see-modules:hover {
+      text-decoration: underline;
+    }
+
+    /* Progress meter */
+    #hex-progress {
+      position: fixed;
+      bottom: 12px;
+      left: 12px;
+      z-index: 950;
+      font:
+        12px/1 system-ui,
+        sans-serif;
+      color: var(--sidebar-levels);
+      background: var(--toggle-bg);
+      padding: 8px 12px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+    }
+
+    #hex-search::placeholder {
+      color: var(--sidebar-levels);
+    }
+
+    @media (width <= 500px) {
+      #hex-search {
+        width: 150px;
+      }
+    }
+
+    /* Modal (shared) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgb(0 0 0 / 50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      position: relative;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      padding: 24px 32px;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgb(0 0 0 / 40%);
+      font:
+        14px/1.6 system-ui,
+        sans-serif;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--sidebar-close);
+      font-size: 22px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    .modal-close:hover {
+      color: var(--sidebar-close-hover);
+    }
+
+    /* Help modal */
+    #help-box {
+      min-width: 260px;
+    }
+
+    #help-box h3 {
+      margin: 0 0 12px;
+      color: var(--sidebar-heading);
+      font-size: 16px;
+    }
+
+    #help-box dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 16px;
+      margin: 0;
+    }
+
+    #help-box dt {
+      text-align: right;
+    }
+
+    #help-box dd {
+      margin: 0;
+      color: var(--sidebar-desc);
+    }
+
+    #help-box kbd {
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      padding: 2px 7px;
+      border-radius: 4px;
+      margin: 0 2px;
+      font:
+        12px/1 system-ui,
+        sans-serif;
+      font-weight: 600;
+    }
+
+    /* Config modal */
+    #config-box {
+      max-width: 360px;
+    }
+
+    #config-box fieldset {
+      border: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    #config-box legend {
+      font-weight: 600;
+      color: var(--sidebar-heading);
+      margin-bottom: 8px;
+    }
+
+    #config-box p {
+      margin: 0 0 12px;
+      color: var(--sidebar-desc);
+    }
+
+    #config-box .segmented {
+      display: flex;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    #config-box .segmented label {
+      flex: 1;
+      text-align: center;
+      padding: 8px 16px;
+      cursor: pointer;
+      border-right: 1px solid var(--sidebar-border);
+      color: var(--sidebar-text);
+      transition:
+        background 0.15s,
+        color 0.15s;
+    }
+
+    #config-box .segmented label:last-child {
+      border-right: none;
+    }
+
+    #config-box .segmented label:hover {
+      background: var(--toggle-hover);
+    }
+
+    #config-box .segmented input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #config-box .segmented input[type="radio"]:checked + span {
+      text-shadow: 0.015em 0 0 currentcolor;
+    }
+
+    #config-box .segmented label:has(input:checked) {
+      background: var(--toggle-bg);
+    }
+
+    #config-save {
+      display: block;
+      margin: 16px auto 0;
+    }
+
+    /* Keyboard hint */
+    #kbd-hint {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 950;
+      font:
+        12px/1 system-ui,
+        sans-serif;
+      color: var(--sidebar-levels);
+      pointer-events: none;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      white-space: nowrap;
+      background: var(--map-body-bg);
+      padding: 8px 14px;
+      border-radius: 8px;
+    }
+
+    #kbd-hint kbd {
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    #contact-link {
+      pointer-events: auto;
+      color: var(--sidebar-link);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    #contact-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Contact modal */
+    #contact-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 260px;
+      max-width: 400px;
+    }
+
+    #contact-box h3 {
+      margin: 0;
+      color: var(--sidebar-heading);
+      font-size: 16px;
+    }
+
+    #contact-box p,
+    #contact-box hr {
+      margin: 0;
+      color: var(--sidebar-desc);
+    }
+
+    #contact-box a:not(.btn-primary) {
+      color: var(--sidebar-link);
+    }
+
+    .btn-primary {
+      display: inline-block;
+      padding: 8px 20px;
+      background: var(--sidebar-link);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.85;
+    }
+
+    #contact-box .contact-cta {
+      text-align: center;
+    }
+
+    #contact-box .contact-disclaimer {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    /* Updates bell button */
+    #updates-bell {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 850;
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #updates-bell:hover {
+      background: var(--toggle-hover);
+    }
+
+    #updates-dot {
+      display: none;
+      width: 8px;
+      height: 8px;
+      background: #c0392b;
+      border-radius: 50%;
+      position: absolute;
+      top: 4px;
+      right: 4px;
+    }
+
+    #updates-dot.visible {
+      display: block;
+    }
+
+    /* Auth button */
+    #auth-btn {
+      position: fixed;
+      top: 12px;
+      right: 58px;
+      z-index: 850;
+      background: var(--toggle-bg);
+      color: var(--toggle-text);
+      border: none;
+      border-radius: 50%;
+      width: 38px;
+      height: 38px;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #auth-btn:hover {
+      background: var(--toggle-hover);
+    }
+
+    #auth-btn.signed-in {
+      background: #2d6a4f;
+      color: #fff;
+    }
+
+    #auth-btn.signed-in:hover {
+      background: #245a42;
+    }
+
+    /* Auth modal */
+    #auth-box {
+      max-width: 360px;
+      min-width: 280px;
+    }
+
+    #auth-box h3 {
+      margin: 0 0 16px;
+      color: var(--sidebar-heading);
+      font-size: 16px;
+    }
+
+    .auth-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .auth-buttons button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--sidebar-text);
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .auth-buttons button:hover {
+      background: #f5f0e8;
+    }
+
+    .auth-buttons button svg {
+      flex-shrink: 0;
+    }
+
+    #auth-signed-in {
+      text-align: center;
+    }
+
+    #auth-signed-in .auth-user {
+      font-weight: 600;
+      color: var(--sidebar-heading);
+      margin-bottom: 12px;
+    }
+
+    .sync-status {
+      font-size: 12px;
+      color: var(--sidebar-levels);
+      margin-top: 8px;
+    }
+
+    #auth-signout-btn {
+      margin-top: 12px;
+      padding: 8px 20px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--sidebar-text);
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    #auth-signout-btn:hover {
+      background: #f5f0e8;
+    }
+
+    /* Updates modal */
+    #updates-box {
+      max-width: 480px;
+      max-height: 70vh;
+      overflow-y: auto;
+      min-width: 300px;
+    }
+
+    #updates-box h3 {
+      margin: 0 0 16px;
+      color: var(--sidebar-heading);
+      font-size: 16px;
+    }
+
+    .update-group + .update-group {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--sidebar-border);
+    }
+
+    .update-date {
+      color: var(--sidebar-levels);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .update-entry {
+      margin-bottom: 8px;
+    }
+
+    .update-entry:last-child {
+      margin-bottom: 0;
+    }
+
+    .update-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .update-type {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: var(--sidebar-border);
+      color: var(--sidebar-levels);
+    }
+
+    .update-title {
+      font-weight: 600;
+      color: var(--sidebar-heading);
+      font-size: 14px;
+    }
+
+    .update-desc {
+      color: var(--sidebar-desc);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    @media (width <= 768px) {
+      #map-container {
+        touch-action: pan-x pan-y;
+      }
+
+      body.sidebar-open #map-container {
+        width: 100%;
+      }
+
+      #sidebar {
+        width: 100%;
+        z-index: 960;
+      }
+
+      #search-results[data-open="true"] {
+        position: fixed;
+        top: 44px;
+        left: 0;
+        right: 0;
+        max-height: 50vh;
+        border-radius: 0 0 12px 12px;
+      }
+    }
+
+    @media (pointer: coarse) {
+      #kbd-hint {
+        display: none;
+      }
+
+      #tooltip {
+        display: none !important;
+      }
+    }
+
+    /* Adventure list below map */
+    #adventure-list {
+      scroll-margin-top: 52px;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 20px 48px;
+      font:
+        15px/1.6 system-ui,
+        sans-serif;
+      color: var(--sidebar-text);
+    }
+
+    #adventure-list h2 {
+      color: var(--sidebar-heading);
+      font-size: 20px;
+      margin: 0 0 16px;
+    }
+
+    .adv-entry {
+      border-bottom: 1px solid var(--sidebar-border);
+      scroll-margin-top: 60px;
+    }
+
+    .adv-entry summary {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 12px 0;
+      cursor: zoom-in;
+      list-style: none;
+    }
+
+    .adv-entry summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .adv-entry summary::before {
+      content: "\25B6";
+      font-size: 10px;
+      color: var(--sidebar-levels);
+      transition: transform 0.15s;
+    }
+
+    .adv-entry[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .adv-name a {
+      color: var(--sidebar-link);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .adv-name a:hover {
+      text-decoration: underline;
+    }
+
+    .adv-official,
+    .adv-ose {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 6px;
+      border-radius: 3px;
+      background: var(--sidebar-border);
+      color: var(--sidebar-levels);
+      vertical-align: middle;
+      margin-left: 6px;
+      cursor: default;
+    }
+
+    .adv-ose {
+      background: #e8d5c4;
+      color: #7a5232;
+    }
+
+    .adv-levels {
+      color: var(--sidebar-levels);
+      font-size: 13px;
+      cursor: default;
+    }
+
+    .adv-meta {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 2px 8px;
+    }
+
+    .adv-location {
+      color: var(--sidebar-levels);
+      font-size: 13px;
+      margin-left: auto;
+      white-space: nowrap;
+      cursor: default;
+    }
+
+    .adv-desc {
+      padding: 0 0 16px 18px;
+      color: var(--sidebar-desc);
+    }
+
+    .adv-desc p {
+      margin: 0 0 8px;
+    }
+
+    .adv-desc p:last-child {
+      margin-bottom: 0;
+    }
+
+    .adv-links {
+      font-size: 13px;
+    }
+
+    .adv-links a {
+      color: var(--sidebar-link);
+    }
+
+    .hex-link {
+      color: var(--sidebar-link);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .hex-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (width <= 768px) {
+      .adv-entry summary::before {
+        padding: 16px;
+        margin: -16px;
+      }
+    }
+
+    #map-footer {
+      text-align: center;
+      padding: 16px 20px 56px;
+      font:
+        12px/1.6 system-ui,
+        sans-serif;
+      color: var(--sidebar-levels);
+    }
+
+    #map-footer a {
+      color: var(--sidebar-levels);
+      text-decoration: none;
+    }
+
+    #map-footer a:hover {
+      text-decoration: underline;
+    }
+
+    #map-footer span {
+      margin: 0 4px;
+    }
+  </style>
+  <h1 class="sr-only">Dolmenwood Hex Map</h1>
+  <main>
+    <div id="map-container">
+      <object
+        id="map"
+        data="/map/map.svg"
+        type="image/svg+xml"
+        aria-label="Interactive hex map of Dolmenwood"
+        >Dolmenwood hex map</object
+      >
+      <div id="adventure-list">
+        <h2>Modules</h2>
+        {
+          adventureList.map((adv) => (
+            <details class="adv-entry" data-module={adv.name}>
+              <summary>
+                <span class="adv-meta">
+                  <span class="adv-name">
+                    <a
+                      href={adv.links[0].url}
+                      target="_blank"
+                      data-links={JSON.stringify(adv.links)}
+                    >
+                      {adv.name}
+                    </a>
+                  </span>
+                  {adv.levels && (
+                    <span class="adv-levels">Levels {adv.levels}</span>
+                  )}
+                  {adv.official && (
+                    <span
+                      class="adv-official"
+                      data-tooltip="Published by Necrotic Gnome"
+                    >
+                      Official
+                    </span>
+                  )}
+                  {adv.ose && (
+                    <span
+                      class="adv-ose"
+                      data-tooltip="Old-School Essentials adventure (not Dolmenwood-specific)"
+                    >
+                      OSE
+                    </span>
+                  )}
+                </span>
+                {adv.hexes.length === 1 &&
+                !/\b[01]\d{3}\b/.test(adv.location) ? (
+                  <a
+                    class="adv-location hex-link"
+                    href={`#hex=${adv.hexes[0]}`}
+                    title={`Estimated as ${adv.hexes[0]}`}
+                  >
+                    {adv.location}
+                  </a>
+                ) : (
+                  <span class="adv-location" set:html={adv.locationHtml} />
+                )}
+              </summary>
+              <div class="adv-desc">
+                <Fragment set:html={adv.descriptionHtml} />
+                {adv.links.length > 0 && (
+                  <p class="adv-links">
+                    {[...adv.links]
+                      .sort((a, b) =>
+                        a.label
+                          .toLowerCase()
+                          .localeCompare(b.label.toLowerCase()),
+                      )
+                      .map((l, i) => (
+                        <>
+                          {i > 0 && " · "}
+                          <a href={l.url} target="_blank">
+                            {l.label}
+                          </a>
+                        </>
+                      ))}
+                  </p>
+                )}
+              </div>
+            </details>
+          ))
+        }
+      </div>
+      <footer id="map-footer">
+        <strong>Dolmenwood Hex Map</strong>
+        <br />
+        Interactive hex map for exploring the Dolmenwood RPG setting, with module
+        locations and cloud-synced notes.
+        <br />
+        Not affiliated with Necrotic Gnome.
+        <br />
+        <a href="./privacy/">Privacy</a>
+        <span aria-hidden="true">·</span>
+        <a href="./terms/">Terms</a>
+      </footer>
+    </div>
+  </main>
+  <div id="top-controls">
+    <div id="search-container">
+      <input
+        id="hex-search"
+        type="text"
+        placeholder="🔍 Search hex, module, or place…"
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-haspopup="listbox"
+        aria-controls="search-results"
+        aria-label="Search hexes, modules, and places"
+      />
+      <ul id="search-results" role="listbox"></ul>
+    </div>
+    <a id="see-modules" href="#adventure-list">↳ All modules</a>
+  </div>
+  <div
+    id="hex-progress"
+    style="display:none"
+    data-tooltip="Press V on a selected hex to cycle exploration state."
+  >
+    <span id="progress-text"></span>
+  </div>
+  <div id="help-overlay" class="modal-overlay" style="display:none">
+    <div id="help-box" class="modal-box">
+      <h3>Keyboard Shortcuts</h3>
+      <dl>
+        <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows</dt><dd>
+          Navigate hexes
+        </dd>
+        <dt><kbd>Enter</kbd></dt><dd>Open sidebar</dd>
+        <dt><kbd>V</kbd></dt><dd>
+          Cycle hex: partially explored → fully explored → clear
+        </dd>
+        <dt><kbd>N</kbd></dt><dd>
+          Edit / save Referee notes (when sidebar open)
+        </dd>
+        <dt><kbd>F</kbd> / <kbd>/</kbd></dt><dd>Focus search</dd>
+        <dt><kbd>-</kbd> / <kbd>+</kbd> / <kbd>0</kbd></dt><dd>
+          Hex label size
+        </dd>
+        <dt><kbd>Esc</kbd></dt><dd>Close sidebar / clear search</dd>
+        <dt><kbd>C</kbd></dt><dd>Preferences</dd>
+        <dt><kbd>U</kbd></dt><dd>Sign in / cloud sync</dd>
+        <dt><kbd>?</kbd></dt><dd>Toggle this help</dd>
+      </dl>
+      <button id="help-close" class="modal-close" aria-label="Close help"
+        >&times;</button
+      >
+    </div>
+  </div>
+  <button
+    id="updates-bell"
+    aria-label="Updates"
+    data-tooltip="Recent updates to the map"
+  >
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      ><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path
+        d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg
+    >
+    <span id="updates-dot"></span>
+  </button>
+  <button
+    id="auth-btn"
+    aria-label="Sign in for cloud sync"
+    data-tooltip="Sign in to sync data across devices"
+  >
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle
+        cx="12"
+        cy="7"
+        r="4"></circle></svg
+    >
+  </button>
+  <div id="kbd-hint">
+    <span>Press <kbd>?</kbd> for keyboard shortcuts</span>
+    <a id="contact-link">About / Add / Correct / Contact</a>
+  </div>
+  <div id="updates-overlay" class="modal-overlay" style="display:none">
+    <div id="updates-box" class="modal-box">
+      <h3>Updates</h3>
+      <div id="updates-content"></div>
+      <button id="updates-close" class="modal-close" aria-label="Close updates"
+        >&times;</button
+      >
+    </div>
+  </div>
+  <div id="config-overlay" class="modal-overlay" style="display:none">
+    <div id="config-box" class="modal-box">
+      <fieldset>
+        <legend>Preferred store</legend>
+        <p>
+          When possible, we'll link to your preferred store when clicking a
+          module title.
+        </p>
+        <div class="segmented">
+          <label
+            ><input type="radio" name="store-pref" value="itch" /><span
+              >itch.io</span
+            ></label
+          >
+          <label
+            ><input type="radio" name="store-pref" value="drivethrurpg" /><span
+              >DriveThruRPG</span
+            ></label
+          >
+          <label
+            ><input type="radio" name="store-pref" value="" /><span>None</span
+            ></label
+          >
+        </div>
+      </fieldset>
+      <button id="config-save" class="btn-primary">Save</button>
+      <button
+        id="config-close"
+        class="modal-close"
+        aria-label="Close preferences">&times;</button
+      >
+    </div>
+  </div>
+  <div id="auth-overlay" class="modal-overlay" style="display:none">
+    <div id="auth-box" class="modal-box">
+      <div id="auth-signed-out">
+        <h3>Cloud sync (optional)</h3>
+        <p style="font-size:13px;color:var(--sidebar-levels);margin:0 0 16px">
+          Your data is always saved to this browser automatically — no account
+          needed. Sign in only if you want to sync across devices and maintain
+          your data after clearing your browser cache. We will never send you
+          unwanted email.
+        </p>
+        <div class="auth-buttons">
+          <button id="auth-discord-btn">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"
+              ><path
+                d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"
+              ></path></svg
+            >
+            Sign in with Discord
+          </button>
+          <button id="auth-google-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24"
+              ><path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
+              ></path><path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              ></path><path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              ></path><path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              ></path></svg
+            >
+            Sign in with Google
+          </button>
+        </div>
+      </div>
+      <div id="auth-signed-in" style="display:none">
+        <h3>Cloud Sync</h3>
+        <div class="auth-user" id="auth-user-name"></div>
+        <div class="sync-status" id="sync-status">Synced</div>
+        <button id="auth-signout-btn">Sign out</button>
+      </div>
+      <button id="auth-close" class="modal-close" aria-label="Close auth"
+        >&times;</button
+      >
+    </div>
+  </div>
+  <div id="contact-overlay" class="modal-overlay" style="display:none">
+    <div id="contact-box" class="modal-box">
+      <h3>About / Add / Correct / Contact</h3>
+      <p>
+        Know of a module that's missing from the map? Spot an error in a hex
+        placement or description? Have a suggestion, complaint, or just want to
+        say hi?
+      </p>
+      {
+        contactMailto && (
+          <p class="contact-cta">
+            <a
+              class="btn-primary"
+              href={`mailto:${contactMailto}`}
+              target="_blank"
+            >
+              Send an email
+            </a>
+          </p>
+        )
+      }
+
+      <p class="contact-disclaimer">
+        This is a fan project, not affiliated with Necrotic Gnome. I'm just
+        trying to help people enjoy the world of Dolmenwood.
+      </p>
+      <button id="contact-close" class="modal-close" aria-label="Close contact"
+        >&times;</button
+      >
+    </div>
+  </div>
+  <div id="tooltip"></div>
+  <div id="attr-tooltip"></div>
+  <div id="sidebar" tabindex="-1">
+    <div id="sidebar-header">
+      <div class="header-row">
+        <h2 id="sidebar-title">Hex Details</h2>
+        <button id="sidebar-close" aria-label="Close sidebar">&times;</button>
+      </div>
+      <div id="sidebar-pois"></div>
+      <div id="sidebar-exploration"></div>
+    </div>
+    <div id="sidebar-notes"></div>
+    <div id="sidebar-content"></div>
+  </div>
+</Base>
+
+<script
+  is:inline
+  define:vars={{
+    modulesJson,
+    poisJson,
+    hexColorsJson,
+    hexPagesJson,
+    updatesJson,
+    locationModulesJson,
+  }}
+>
+  window.__MAP_DATA__ = {
+    modules: JSON.parse(modulesJson),
+    pois: JSON.parse(poisJson),
+    hexColors: JSON.parse(hexColorsJson),
+    hexPages: JSON.parse(hexPagesJson),
+    updates: JSON.parse(updatesJson),
+    locationModules: JSON.parse(locationModulesJson),
+  };
+</script>
+
+<script>
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  import { renderMarkdown } from "../../lib/map/markdown";
+  import { buildSearchIndex, searchEntries } from "../../lib/map/search";
+  import {
+    navigateHex,
+    nextVisitedState,
+    countProgress,
+  } from "../../lib/map/hex-nav";
+  import {
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    SUPABASE_ENABLED,
+  } from "../../lib/config";
+
+  declare global {
+    interface Window {
+      __MAP_DATA__: any;
+      stonks?: { event: (name: string, props?: Record<string, any>) => void };
+      supabase?: any;
+    }
+  }
+
+  const {
+    modules: MODULES,
+    pois: POIS,
+    hexColors: HEX_COLORS,
+    hexPages: HEX_PAGES,
+    updates: UPDATES,
+    locationModules: LOCATION_MODULES,
+  } = window.__MAP_DATA__;
+
+  function trackEvent(name: string, props: Record<string, any> = {}) {
+    if (window.stonks) window.stonks.event(name, props);
+  }
+
+  // --- Supabase init (deferred) ---
+  // On dolmenwood subdomain, CloudFront prefixes /map, so the consent page is at /oauth/consent.
+  // On the main domain, the full /map/oauth/consent path is needed.
+  const consentPath = window.location.host.startsWith("dolmenwood.")
+    ? "/oauth/consent"
+    : "/map/oauth/consent";
+  let sb: any = null;
+  let isSyncing = false;
+  let pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function initSupabase() {
+    if (!window.supabase) return;
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    sb.auth.onAuthStateChange((event: any, session: any) => {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+        if (session?.user) {
+          updateAuthUI(session.user);
+          syncFromCloud(session.user);
+        }
+      } else if (event === "SIGNED_OUT") {
+        updateAuthUI(null);
+      }
+    });
+    sb.auth.getSession().then(({ data: { session } }: any) => {
+      if (session?.user) {
+        updateAuthUI(session.user);
+      }
+    });
+  }
+
+  const DEFAULT_LABEL_SIZE = 54;
+  const SVG_ASPECT = 4535 / 3396; // from map.svg viewBox
+  const MAP_MIN_WIDTH = 980;
+  const MAX_MOBILE_ZOOM = 3;
+  const mobileQuery = window.matchMedia("(max-width: 768px)");
+  let mobileZoom = 1;
+
+  // --- Map sizing (scale with browser zoom) ---
+  const mapContainer = document.getElementById("map-container") as HTMLElement;
+  const mapObj = document.getElementById("map") as HTMLElement;
+
+  // devicePixelRatio changes with browser zoom but is NOT affected by
+  // devtools open/close, so it's a reliable baseline for zoom detection.
+  const baseDPR = window.devicePixelRatio;
+
+  function updateMapSize() {
+    if (mobileQuery.matches) {
+      const w = Math.max(MAP_MIN_WIDTH, mapContainer.clientWidth) * mobileZoom;
+      mapObj.style.width = w + "px";
+      mapObj.style.height = w / SVG_ASPECT + "px";
+    } else {
+      const zoom = window.devicePixelRatio / baseDPR;
+      mapObj.style.width = mapContainer.clientWidth * zoom + "px";
+      mapObj.style.height = mapContainer.clientHeight * zoom + "px";
+    }
+  }
+
+  new ResizeObserver(() => updateMapSize()).observe(mapContainer);
+  updateMapSize();
+
+  // --- Pinch-to-zoom on mobile ---
+  let lastPinchDist = 0;
+
+  mapContainer.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastPinchDist = Math.hypot(dx, dy);
+      }
+    },
+    { passive: true },
+  );
+
+  mapContainer.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length !== 2) return;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (!lastPinchDist) return;
+
+      const scale = dist / lastPinchDist;
+      const oldZoom = mobileZoom;
+      mobileZoom = Math.min(MAX_MOBILE_ZOOM, Math.max(1, mobileZoom * scale));
+
+      if (mobileZoom !== oldZoom) {
+        e.preventDefault();
+        // Zoom centered on pinch midpoint
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        const scrollX = mapContainer.scrollLeft + midX;
+        const scrollY = mapContainer.scrollTop + midY;
+        const ratio = mobileZoom / oldZoom;
+
+        updateMapSize();
+
+        mapContainer.scrollLeft = scrollX * ratio - midX;
+        mapContainer.scrollTop = scrollY * ratio - midY;
+      }
+
+      lastPinchDist = dist;
+    },
+    { passive: false },
+  );
+
+  mapContainer.addEventListener("touchend", () => {
+    lastPinchDist = 0;
+  });
+
+  // Named color constants
+  const ACCENT_GREEN = "#2d6a4f";
+  const HOVER_FILL = "rgba(45,106,79,0.25)";
+  const SEARCH_HIGHLIGHT = "rgba(45,106,79,0.4)";
+  const MODULE_BADGE_COLOR = "#a0522d";
+
+  // --- Search index ---
+  const SEARCH_INDEX = buildSearchIndex(
+    HEX_COLORS,
+    POIS,
+    MODULES,
+    LOCATION_MODULES,
+  );
+
+  const tooltip = document.getElementById("tooltip") as HTMLElement;
+
+  // --- data-tooltip hover tooltips ---
+  const attrTooltip = document.getElementById("attr-tooltip") as HTMLElement;
+  document.addEventListener("mouseover", (e) => {
+    const el = (e.target as HTMLElement)?.closest("[data-tooltip]");
+    if (!el) {
+      attrTooltip.style.display = "none";
+      return;
+    }
+    attrTooltip.textContent = (el as HTMLElement).dataset.tooltip ?? "";
+    attrTooltip.style.display = "block";
+    const r = el.getBoundingClientRect();
+    let left = r.left;
+    let top = r.top - attrTooltip.offsetHeight - 4;
+    if (top < 0) top = r.bottom + 4;
+    if (left + attrTooltip.offsetWidth > window.innerWidth)
+      left = window.innerWidth - attrTooltip.offsetWidth - 4;
+    if (left < 4) left = 4;
+    attrTooltip.style.left = left + "px";
+    attrTooltip.style.top = top + "px";
+  });
+  document.addEventListener("mouseout", (e) => {
+    if ((e.target as HTMLElement)?.closest("[data-tooltip]"))
+      attrTooltip.style.display = "none";
+  });
+
+  const sidebar = document.getElementById("sidebar") as HTMLElement;
+  const sidebarTitle = document.getElementById("sidebar-title") as HTMLElement;
+  const sidebarContent = document.getElementById(
+    "sidebar-content",
+  ) as HTMLElement;
+
+  document
+    .getElementById("sidebar-close")!
+    .addEventListener("click", closeSidebar);
+  const helpOverlay = document.getElementById("help-overlay") as HTMLElement;
+  function toggleHelp() {
+    if (helpOverlay.style.display === "none")
+      trackEvent("kbd shortcuts opened");
+    helpOverlay.style.display =
+      helpOverlay.style.display === "none" ? "flex" : "none";
+  }
+  document.getElementById("help-close")!.addEventListener("click", toggleHelp);
+  helpOverlay.addEventListener("click", (e) => {
+    if (e.target === helpOverlay) toggleHelp();
+  });
+
+  // --- Store preference ---
+  const STORE_PREF_KEY = "map-store-pref";
+  const STORE_DOMAINS: Record<string, string> = {
+    itch: "itch.io",
+    drivethrurpg: "drivethrurpg.com",
+  };
+  function getStorePref() {
+    return localStorage.getItem(STORE_PREF_KEY);
+  }
+  // Default to itch.io for links even when no preference is saved.
+  // The config modal intentionally shows "None" in that case — the user
+  // hasn't chosen yet, so we don't pre-select a store on their behalf.
+  function preferredLink(links: { label: string; url: string }[]) {
+    const pref = getStorePref() ?? "itch";
+    const domain = STORE_DOMAINS[pref];
+    if (domain) {
+      const match = links.find((l) => l.url.includes(domain));
+      if (match) return match;
+    }
+    return links[0];
+  }
+  function updateAdventureListLinks() {
+    document
+      .querySelectorAll("#adventure-list .adv-name a[data-links]")
+      .forEach((a) => {
+        const el = a as HTMLAnchorElement;
+        const links = JSON.parse(el.dataset.links!);
+        el.href = preferredLink(links).url;
+      });
+  }
+
+  // --- Config overlay ---
+  const configOverlay = document.getElementById(
+    "config-overlay",
+  ) as HTMLElement;
+  function toggleConfig() {
+    if (configOverlay.style.display === "none") {
+      trackEvent("Preferences opened");
+      // Sync radio buttons with current preference
+      const pref = getStorePref() ?? "";
+      const radio = configOverlay.querySelector(
+        `input[name="store-pref"][value="${pref}"]`,
+      );
+      if (radio) (radio as HTMLInputElement).checked = true;
+      configOverlay.style.display = "flex";
+    } else {
+      configOverlay.style.display = "none";
+    }
+  }
+  document
+    .getElementById("config-close")!
+    .addEventListener("click", toggleConfig);
+  configOverlay.addEventListener("click", (e) => {
+    if (e.target === configOverlay) toggleConfig();
+  });
+  document.getElementById("config-save")!.addEventListener("click", () => {
+    const selected = configOverlay.querySelector(
+      'input[name="store-pref"]:checked',
+    ) as HTMLInputElement | null;
+    if (selected) {
+      localStorage.setItem(STORE_PREF_KEY, selected.value);
+      trackEvent("Store preference saved", {
+        choice: selected.value || "none",
+      });
+      schedulePush();
+    }
+    updateAdventureListLinks();
+    if (currentHex && sidebar.classList.contains("open")) {
+      openSidebar(currentHex);
+    }
+    toggleConfig();
+  });
+
+  // Apply stored preference to adventure list links on load
+  updateAdventureListLinks();
+
+  const contactOverlay = document.getElementById(
+    "contact-overlay",
+  ) as HTMLElement;
+  function toggleContact() {
+    if (contactOverlay.style.display === "none") trackEvent("Contact opened");
+    contactOverlay.style.display =
+      contactOverlay.style.display === "none" ? "flex" : "none";
+  }
+  document
+    .getElementById("contact-link")!
+    .addEventListener("click", toggleContact);
+  document
+    .getElementById("contact-close")!
+    .addEventListener("click", toggleContact);
+  contactOverlay.addEventListener("click", (e) => {
+    if (e.target === contactOverlay) toggleContact();
+  });
+  document
+    .querySelector("#contact-box .btn-primary")!
+    .addEventListener("click", () => {
+      trackEvent("Contact button clicked");
+    });
+
+  // --- Auth overlay ---
+  const authOverlay = document.getElementById("auth-overlay") as HTMLElement;
+  const authBtn = document.getElementById("auth-btn") as HTMLElement;
+  const authSignedOut = document.getElementById(
+    "auth-signed-out",
+  ) as HTMLElement;
+  const authSignedIn = document.getElementById("auth-signed-in") as HTMLElement;
+  const authUserName = document.getElementById("auth-user-name") as HTMLElement;
+  const syncStatusEl = document.getElementById("sync-status") as HTMLElement;
+
+  function updateAuthUI(user: any) {
+    if (user) {
+      authBtn.classList.add("signed-in");
+      authBtn.setAttribute("aria-label", "Cloud sync settings");
+      authBtn.setAttribute("data-tooltip", "Signed in — cloud sync active");
+      authSignedOut.style.display = "none";
+      authSignedIn.style.display = "";
+      const name = user.user_metadata?.full_name || user.email || "Signed in";
+      const provider = user.app_metadata?.provider;
+      const providerIcons: Record<string, string> = {
+        discord:
+          '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px"><path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/></svg>',
+        google:
+          '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
+      };
+      const icon = providerIcons[provider] || "";
+      authUserName.innerHTML = icon + (icon ? " " : "") + name;
+    } else {
+      authBtn.classList.remove("signed-in");
+      authBtn.setAttribute("aria-label", "Sign in for cloud sync");
+      authBtn.setAttribute(
+        "data-tooltip",
+        "Sign in to sync data across devices",
+      );
+      authSignedOut.style.display = "";
+      authSignedIn.style.display = "none";
+    }
+  }
+
+  function toggleAuth() {
+    if (authOverlay.style.display === "none") {
+      trackEvent("Auth opened");
+      authOverlay.style.display = "flex";
+    } else {
+      authOverlay.style.display = "none";
+    }
+  }
+  authBtn.addEventListener("click", toggleAuth);
+  document.getElementById("auth-close")!.addEventListener("click", toggleAuth);
+  authOverlay.addEventListener("click", (e) => {
+    if (e.target === authOverlay) toggleAuth();
+  });
+
+  document.getElementById("auth-discord-btn")!.addEventListener("click", () => {
+    if (!sb) return;
+    trackEvent("Auth sign in", { provider: "discord" });
+    sb.auth.signInWithOAuth({
+      provider: "discord",
+      options: {
+        redirectTo: window.location.origin + consentPath,
+      },
+    });
+  });
+  document.getElementById("auth-google-btn")!.addEventListener("click", () => {
+    if (!sb) return;
+    trackEvent("Auth sign in", { provider: "google" });
+    sb.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + consentPath },
+    });
+  });
+  document
+    .getElementById("auth-signout-btn")!
+    .addEventListener("click", async () => {
+      if (!sb) return;
+      trackEvent("Auth sign out");
+      await sb.auth.signOut();
+      updateAuthUI(null);
+      toggleAuth();
+    });
+
+  // --- Updates overlay ---
+  const UPDATES_SEEN_KEY = "map-updates-last-seen-id";
+  const updatesOverlay = document.getElementById(
+    "updates-overlay",
+  ) as HTMLElement;
+  const updatesDot = document.getElementById("updates-dot") as HTMLElement;
+
+  function checkUpdatesBadge() {
+    if (!UPDATES.length) return;
+    const lastSeenId =
+      parseInt(localStorage.getItem(UPDATES_SEEN_KEY) ?? "", 10) || 0;
+    if (UPDATES[0].id > lastSeenId) {
+      updatesDot.classList.add("visible");
+    }
+  }
+  checkUpdatesBadge();
+
+  function toggleUpdates() {
+    if (updatesOverlay.style.display === "none") {
+      trackEvent("Updates opened");
+      const content = document.getElementById("updates-content") as HTMLElement;
+      // Group updates by date
+      const grouped: Array<{ date: string; entries: any[] }> = [];
+      for (const u of UPDATES) {
+        const last = grouped[grouped.length - 1];
+        if (last && last.date === u.date) {
+          last.entries.push(u);
+        } else {
+          grouped.push({ date: u.date, entries: [u] });
+        }
+      }
+      content.innerHTML = grouped
+        .slice(0, 10)
+        .map(
+          (g) =>
+            `<div class="update-group">
+            <div class="update-date">${g.date}</div>
+            ${g.entries
+              .map(
+                (u) =>
+                  `<div class="update-entry">
+                <div class="update-meta">
+                  <span class="update-type">${u.type}</span>
+                </div>
+                <div class="update-title">${u.title}</div>
+                <div class="update-desc">${u.description}</div>
+              </div>`,
+              )
+              .join("")}
+          </div>`,
+        )
+        .join("");
+      localStorage.setItem(UPDATES_SEEN_KEY, String(UPDATES[0].id));
+      schedulePush();
+      updatesDot.classList.remove("visible");
+      updatesOverlay.style.display = "flex";
+    } else {
+      updatesOverlay.style.display = "none";
+    }
+  }
+  document
+    .getElementById("updates-bell")!
+    .addEventListener("click", toggleUpdates);
+  document
+    .getElementById("updates-close")!
+    .addEventListener("click", toggleUpdates);
+  updatesOverlay.addEventListener("click", (e) => {
+    if (e.target === updatesOverlay) toggleUpdates();
+  });
+
+  // --- Hex navigation state ---
+  let currentHex: string | null = null;
+  let allHexIds: string[] = []; // populated after SVG load
+  const hexPolys: Record<string, SVGPolygonElement> = {}; // hexId -> polygon element
+  let activeHexShadow: SVGPolygonElement | null = null; // cloned polygon for drop shadow
+  let setLabelSize: ((size: number) => void) | null = null; // assigned after SVG load
+  let getLabelSize: (() => number) | null = null;
+
+  // --- Visited hex persistence ---
+  // States: "visited" (fully explored) or "partial" (partially explored)
+  const VISITED_KEY = "map-visited-hexes";
+  const VISITED_V2_KEY = "map-visited-hexes-v2";
+  function loadVisited() {
+    try {
+      const v2 = localStorage.getItem(VISITED_V2_KEY);
+      if (v2) return new Map(JSON.parse(v2));
+      // Migrate v1 Set format: treat all as "visited"
+      const v1 = JSON.parse(localStorage.getItem(VISITED_KEY) || "[]");
+      const migrated = new Map(v1.map((id: string) => [id, "visited"]));
+      if (v1.length) {
+        localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...migrated]));
+        localStorage.removeItem(VISITED_KEY);
+      }
+      return migrated;
+    } catch {
+      return new Map();
+    }
+  }
+  function saveVisited() {
+    localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
+    schedulePush();
+  }
+  let visitedHexes = loadVisited();
+
+  // --- DM Notes persistence ---
+  const NOTES_KEY = "map-hex-notes";
+  function loadNotes() {
+    try {
+      return JSON.parse(localStorage.getItem(NOTES_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function saveNotes() {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(hexNotes));
+    schedulePush();
+  }
+  let hexNotes: Record<string, string> = loadNotes();
+  let notesEditMode = false;
+  let svgDocRef: Document | null = null;
+  let overlayRef: Element | null = null;
+
+  // --- Cloud sync (last-write-wins) ---
+  // On load: cloud replaces local state. On change: local overwrites cloud.
+  // No conflict resolution — designed for single user across devices.
+  function gatherSyncData() {
+    return {
+      visitedHexes: [...visitedHexes],
+      hexNotes: hexNotes,
+      storePref: localStorage.getItem(STORE_PREF_KEY) || "",
+      lastSeenUpdateId:
+        parseInt(localStorage.getItem("map-updates-last-seen-id") ?? "", 10) ||
+        0,
+      labelSize:
+        parseInt(localStorage.getItem("map-label-size") ?? "", 10) ||
+        DEFAULT_LABEL_SIZE,
+    };
+  }
+
+  function schedulePush() {
+    if (!sb || isSyncing) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushToCloud, 2000);
+  }
+
+  function mergeCloudData(cloud: any) {
+    // Cloud is source of truth for visited hexes
+    if (Array.isArray(cloud.visitedHexes)) {
+      visitedHexes = new Map(cloud.visitedHexes);
+      localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
+      reapplyAllVisitedOverlays();
+    }
+    // Cloud is source of truth for notes
+    if (cloud.hexNotes && typeof cloud.hexNotes === "object") {
+      hexNotes = cloud.hexNotes;
+      localStorage.setItem(NOTES_KEY, JSON.stringify(hexNotes));
+    }
+    // Scalar prefs: cloud wins
+    if (cloud.storePref !== undefined) {
+      localStorage.setItem(STORE_PREF_KEY, cloud.storePref);
+      updateAdventureListLinks();
+    }
+    if (cloud.lastSeenUpdateId) {
+      const localSeen =
+        parseInt(localStorage.getItem("map-updates-last-seen-id") ?? "", 10) ||
+        0;
+      if (cloud.lastSeenUpdateId > localSeen) {
+        localStorage.setItem(
+          "map-updates-last-seen-id",
+          String(cloud.lastSeenUpdateId),
+        );
+        checkUpdatesBadge();
+      }
+    }
+    if (cloud.labelSize && setLabelSize) {
+      localStorage.setItem("map-label-size", String(cloud.labelSize));
+      setLabelSize(cloud.labelSize);
+    }
+  }
+
+  async function pushToCloud() {
+    if (!sb || isSyncing) return;
+    try {
+      const {
+        data: { user },
+      } = await sb.auth.getUser();
+      if (!user) return;
+      syncStatusEl.textContent = "Syncing...";
+      const { error } = await sb.from("map_user_data").upsert({
+        user_id: user.id,
+        data: gatherSyncData(),
+      });
+      if (error) {
+        console.warn("Cloud push failed:", error.message);
+        syncStatusEl.textContent = "Sync failed";
+      } else {
+        syncStatusEl.textContent = "Synced";
+      }
+    } catch (err) {
+      console.warn("Cloud push error:", err);
+      syncStatusEl.textContent = "Sync failed";
+    }
+  }
+
+  function reapplyAllVisitedOverlays() {
+    // Clear existing overlays
+    Object.keys(visitedOverlays).forEach((hexId) => {
+      if (visitedOverlays[hexId]) {
+        visitedOverlays[hexId].remove();
+        delete visitedOverlays[hexId];
+      }
+    });
+    // Reapply from current state
+    visitedHexes.forEach((state, hexId) => applyVisitedOverlay(hexId, state));
+    updateProgress();
+  }
+
+  async function syncFromCloud(user: any) {
+    if (!sb || !user) return;
+    isSyncing = true;
+    syncStatusEl.textContent = "Syncing...";
+    try {
+      const { data, error } = await sb
+        .from("map_user_data")
+        .select("data")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) {
+        console.warn("Cloud pull failed:", error.message);
+        syncStatusEl.textContent = "Sync failed";
+        isSyncing = false;
+        return;
+      }
+      if (data && data.data) {
+        mergeCloudData(data.data);
+        syncStatusEl.textContent = "Synced";
+      } else {
+        // No cloud data yet — push local data up
+        await pushToCloud();
+      }
+    } catch (err) {
+      console.warn("Cloud sync error:", err);
+      syncStatusEl.textContent = "Sync failed";
+    }
+    isSyncing = false;
+  }
+
+  // Load Supabase asynchronously (skipped entirely when no project is configured;
+  // progress then stays in localStorage and the auth button is hidden)
+  if (SUPABASE_ENABLED) {
+    const s = document.createElement("script");
+    s.src =
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    s.onload = initSupabase;
+    document.head.appendChild(s);
+  } else {
+    authBtn.style.display = "none";
+  }
+
+  function updateProgress() {
+    const { visited, partial } = countProgress(visitedHexes, HEX_PAGES);
+    const progressEl = document.getElementById("hex-progress") as HTMLElement;
+    if (visited === 0 && partial === 0) {
+      progressEl.style.display = "none";
+      return;
+    }
+    const parts: string[] = [];
+    if (visited > 0) parts.push(`${visited} fully explored`);
+    if (partial > 0) parts.push(`${partial} partially explored`);
+    progressEl.style.display = "";
+    const noun = visited + partial === 1 ? " hex." : " hexes.";
+    document.getElementById("progress-text")!.textContent =
+      parts.join(" and ") + noun;
+  }
+  updateProgress();
+
+  const visitedOverlays: Record<string, Element> = {}; // hexId -> overlay element
+  let visitedGroup: Element | null = null; // <g> for overlays, created during SVG init
+  function applyVisitedOverlay(
+    hexId: string,
+    state: string | null | undefined,
+  ) {
+    const poly = hexPolys[hexId];
+    if (!poly || !visitedGroup) return;
+    // Remove existing overlay first
+    if (visitedOverlays[hexId]) {
+      visitedOverlays[hexId].remove();
+      delete visitedOverlays[hexId];
+    }
+    if (!state) return;
+    const el = poly.cloneNode(false) as SVGPolygonElement;
+    el.removeAttribute("data-hex");
+    el.removeAttribute("class");
+    el.classList.add(state === "partial" ? "visited-hatch" : "partial-hatch");
+    el.removeAttribute("fill-opacity");
+    visitedGroup.appendChild(el);
+    visitedOverlays[hexId] = el;
+  }
+
+  function toggleVisited(hexId: string) {
+    if (!hexId) return;
+    const current = visitedHexes.get(hexId);
+    const next = nextVisitedState(current);
+    if (next) {
+      visitedHexes.set(hexId, next);
+    } else {
+      visitedHexes.delete(hexId);
+    }
+    applyVisitedOverlay(hexId, next);
+    saveVisited();
+    updateProgress();
+    // Refresh sidebar exploration badge if open
+    if (sidebar.classList.contains("open")) {
+      updateSidebarExploration(hexId);
+    }
+    trackEvent("Hex visited", {
+      hex: hexId,
+      action: next || "remove",
+    });
+  }
+
+  function updateSidebarExploration(hexId: string) {
+    const el = document.getElementById("sidebar-exploration") as HTMLElement;
+    const state = visitedHexes.get(hexId);
+    if (state === "partial") {
+      el.innerHTML =
+        '<span class="exploration-badge partial">Partially explored</span>';
+    } else if (state === "visited") {
+      el.innerHTML =
+        '<span class="exploration-badge visited">Fully explored</span>';
+    } else {
+      el.innerHTML = "";
+    }
+  }
+
+  const NAV_KEYS = {
+    a: [-1, 0],
+    h: [-1, 0],
+    ArrowLeft: [-1, 0],
+    d: [1, 0],
+    l: [1, 0],
+    ArrowRight: [1, 0],
+    w: [0, -1],
+    k: [0, -1],
+    ArrowUp: [0, -1],
+    s: [0, 1],
+    j: [0, 1],
+    ArrowDown: [0, 1],
+  };
+
+  function selectHex(hexId: string) {
+    // Clear previous active hex outline
+    if (currentHex && hexPolys[currentHex]) {
+      hexPolys[currentHex].style.stroke = "";
+      hexPolys[currentHex].style.strokeWidth = "";
+    }
+    if (activeHexShadow) {
+      activeHexShadow.remove();
+      activeHexShadow = null;
+    }
+    currentHex = hexId;
+    if (hexId && hexPolys[hexId]) {
+      const poly = hexPolys[hexId];
+      poly.style.stroke = ACCENT_GREEN;
+      poly.style.strokeWidth = "6";
+      // Shadow clone: stroke-only copy behind the hex, blurred via SVG filter
+      activeHexShadow = poly.cloneNode() as SVGPolygonElement;
+      activeHexShadow.setAttribute("fill", "none");
+      activeHexShadow.setAttribute("stroke", "rgba(0,0,0,0.8)");
+      activeHexShadow.setAttribute("stroke-width", "20");
+      activeHexShadow.setAttribute("filter", "url(#active-hex-blur)");
+      activeHexShadow.style.pointerEvents = "none";
+      poly.parentNode!.insertBefore(activeHexShadow, poly);
+    }
+    // If sidebar is open, refresh content (skip tracking — keyboard nav is noisy)
+    if (hexId && sidebar.classList.contains("open")) {
+      openSidebar(hexId, { skipTracking: true });
+    }
+  }
+
+  function doNavigateHex(dcol: number, drow: number) {
+    if (!allHexIds.length) return;
+    if (!currentHex) {
+      selectHex(allHexIds[0]);
+      return;
+    }
+    const target = navigateHex(
+      currentHex,
+      dcol,
+      drow,
+      new Set(Object.keys(hexPolys)),
+    );
+    if (target) selectHex(target);
+  }
+
+  // Search state & helpers (outer scope for handleKeydown/clearSearch access)
+  let searchSelectedIdx = -1;
+  let currentSearchResults: any[] = [];
+
+  function isSearchDropdownOpen() {
+    const el = document.getElementById("search-results");
+    return el && el.getAttribute("data-open") === "true";
+  }
+
+  function closeSearchDropdown() {
+    const el = document.getElementById("search-results");
+    const input = document.getElementById("hex-search");
+    if (el) el.setAttribute("data-open", "false");
+    if (input) input.setAttribute("aria-expanded", "false");
+    searchSelectedIdx = -1;
+    currentSearchResults = [];
+  }
+
+  function clearHexHighlights() {
+    Object.values(hexPolys).forEach((poly) => {
+      poly.style.fill = "";
+      poly.style.fillOpacity = "";
+    });
+  }
+
+  function renderSearchResults(results: any[]) {
+    const searchResultsList = document.getElementById(
+      "search-results",
+    ) as HTMLElement;
+    const hexSearch = document.getElementById("hex-search") as HTMLInputElement;
+    searchResultsList.innerHTML = "";
+    currentSearchResults = results;
+    searchSelectedIdx = -1;
+    if (results.length === 0) {
+      closeSearchDropdown();
+      return;
+    }
+    results.forEach((entry, i) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", "false");
+      li.dataset.index = String(i);
+      const hexDisplay =
+        entry.type === "location-module" ? entry.location : entry.hexId;
+      li.innerHTML =
+        `<span class="sr-badge">${entry.typeBadge}</span>` +
+        `<span class="sr-label">${entry.label}</span>` +
+        (entry.type !== "hex"
+          ? `<span class="sr-hex">${hexDisplay}</span>`
+          : "");
+      li.addEventListener("click", () => selectSearchResult(entry));
+      searchResultsList.appendChild(li);
+    });
+    searchResultsList.setAttribute("data-open", "true");
+    hexSearch.setAttribute("aria-expanded", "true");
+  }
+
+  function updateSearchSelection(newIdx: number) {
+    const items = document
+      .getElementById("search-results")!
+      .querySelectorAll("li");
+    if (items[searchSelectedIdx]) {
+      items[searchSelectedIdx].setAttribute("aria-selected", "false");
+    }
+    searchSelectedIdx = newIdx;
+    if (items[searchSelectedIdx]) {
+      items[searchSelectedIdx].setAttribute("aria-selected", "true");
+      items[searchSelectedIdx].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function selectSearchResult(entry: any) {
+    const hexSearch = document.getElementById("hex-search") as HTMLInputElement;
+    trackEvent("Search", {
+      query: hexSearch.value,
+      type: entry.type,
+      hex: entry.hexId,
+    });
+    hexSearch.value = "";
+    closeSearchDropdown();
+    clearHexHighlights();
+    hexSearch.blur();
+    if (entry.type === "location-module") {
+      const details = document.querySelector(
+        `#adventure-list details[data-module="${entry.label}"]`,
+      ) as HTMLDetailsElement | null;
+      if (details) {
+        details.open = true;
+        details.scrollIntoView({ behavior: "smooth" });
+      }
+      return;
+    }
+    if (hexPolys[entry.hexId]) selectHex(entry.hexId);
+    openSidebar(entry.hexId);
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    const inSearch =
+      document.activeElement === document.getElementById("hex-search");
+    const inNotes =
+      document.activeElement?.classList.contains("notes-textarea");
+    const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
+    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (authOverlay.style.display !== "none") {
+      if (key === "Escape") toggleAuth();
+      return;
+    }
+    if (updatesOverlay.style.display !== "none") {
+      if (key === "Escape") toggleUpdates();
+      return;
+    }
+    if (configOverlay.style.display !== "none") {
+      if (key === "Escape") toggleConfig();
+      return;
+    }
+    if (contactOverlay.style.display !== "none") {
+      if (key === "Escape") toggleContact();
+      return;
+    }
+    if (helpOverlay.style.display !== "none") {
+      if (key === "Escape" || key === "?") toggleHelp();
+      return;
+    }
+    if (key === "?" && !inSearch && !inNotes && !hasModifier) {
+      toggleHelp();
+      return;
+    }
+    if (key === "u" && !inSearch && !inNotes && !hasModifier) {
+      toggleAuth();
+      return;
+    }
+    if (key === "c" && !inSearch && !inNotes && !hasModifier) {
+      toggleConfig();
+      return;
+    }
+    if ((key === "f" || key === "/") && !inSearch && !inNotes && !hasModifier) {
+      e.preventDefault();
+      document.getElementById("hex-search")!.focus();
+      return;
+    }
+    // Hex navigation (not when typing in search or notes)
+    if (
+      !inSearch &&
+      !inNotes &&
+      !hasModifier &&
+      NAV_KEYS[key as keyof typeof NAV_KEYS]
+    ) {
+      e.preventDefault();
+      const [dc, dr] = NAV_KEYS[key as keyof typeof NAV_KEYS];
+      doNavigateHex(dc, dr);
+      return;
+    }
+    // V toggles visited state for current hex
+    if (!inSearch && !inNotes && !hasModifier && key === "v" && currentHex) {
+      toggleVisited(currentHex);
+      return;
+    }
+    // N toggles DM notes edit/save for current hex
+    if (
+      !inSearch &&
+      !inNotes &&
+      !hasModifier &&
+      key === "n" &&
+      currentHex &&
+      sidebar.classList.contains("open")
+    ) {
+      e.preventDefault();
+      if (notesEditMode) {
+        saveNote(currentHex);
+      } else {
+        notesEditMode = true;
+        renderNotesSection(currentHex);
+      }
+      return;
+    }
+    // Enter opens/refreshes sidebar for current hex (not when in search or notes)
+    if (
+      !inSearch &&
+      !inNotes &&
+      !hasModifier &&
+      key === "Enter" &&
+      currentHex
+    ) {
+      openSidebar(currentHex);
+      return;
+    }
+    if (
+      (key === "=" || key === "+" || key === "-" || key === "0") &&
+      !inSearch &&
+      !inNotes &&
+      !hasModifier &&
+      getLabelSize
+    ) {
+      e.preventDefault();
+      if (key === "0") {
+        setLabelSize!(DEFAULT_LABEL_SIZE);
+        trackEvent("Label size changed", { action: "reset" });
+      } else {
+        const delta = key === "=" || key === "+" ? 4 : -4;
+        setLabelSize!(getLabelSize!() + delta);
+        trackEvent("Label size changed", {
+          action: delta > 0 ? "increase" : "decrease",
+        });
+      }
+      return;
+    }
+    if (key === "Escape") {
+      if (isSearchDropdownOpen()) {
+        closeSearchDropdown();
+      } else if (sidebar.classList.contains("open")) {
+        closeSidebar();
+      } else {
+        clearSearch();
+      }
+    }
+  }
+  document.addEventListener("keydown", handleKeydown);
+
+  function clearSearch() {
+    const input = document.getElementById("hex-search") as HTMLInputElement;
+    if (input.value) {
+      input.value = "";
+      input.dispatchEvent(new Event("input"));
+    }
+    closeSearchDropdown();
+    clearHexHighlights();
+    input.blur();
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove("open");
+    document.body.classList.remove("sidebar-open");
+    sidebar.style.transform = "";
+    notesEditMode = false;
+    history.replaceState(null, "", window.location.pathname);
+  }
+
+  // --- Swipe-to-close sidebar on mobile ---
+  let swipeStartX = 0;
+  let swipeStartY = 0;
+  let swiping = false;
+
+  sidebar.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.touches.length !== 1) return;
+      swipeStartX = e.touches[0].clientX;
+      swipeStartY = e.touches[0].clientY;
+      swiping = false;
+    },
+    { passive: true },
+  );
+
+  sidebar.addEventListener(
+    "touchmove",
+    (e) => {
+      if (e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - swipeStartX;
+      const dy = e.touches[0].clientY - swipeStartY;
+
+      // Only start swiping if horizontal movement dominates
+      if (!swiping) {
+        if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          swiping = true;
+        } else {
+          return;
+        }
+      }
+
+      // Only allow swiping right (to close)
+      if (dx > 0) {
+        e.preventDefault();
+        sidebar.style.transition = "none";
+        sidebar.style.transform = `translateX(${dx}px)`;
+      }
+    },
+    { passive: false },
+  );
+
+  sidebar.addEventListener("touchend", (e) => {
+    if (!swiping) return;
+    sidebar.style.transition = "";
+    const dx = e.changedTouches[0].clientX - swipeStartX;
+    if (dx > 80) {
+      closeSidebar();
+    } else {
+      sidebar.style.transform = "";
+    }
+    swiping = false;
+  });
+
+  // --- DM Notes sidebar rendering ---
+  const sidebarNotes = document.getElementById("sidebar-notes") as HTMLElement;
+
+  function updateNoteBadge(hexId: string) {
+    if (!svgDocRef || !overlayRef) return;
+    // Remove existing badge
+    const existing = overlayRef.querySelector(`[data-note-badge="${hexId}"]`);
+    if (existing) existing.remove();
+    if (!hexNotes[hexId]) return;
+
+    const poly = hexPolys[hexId];
+    if (!poly) return;
+    const pts = poly
+      .getAttribute("points")!
+      .trim()
+      .split(/\s+/)
+      .map((p: string) => {
+        const [x, y] = p.split(",").map(Number);
+        return { x, y };
+      });
+    // Top-right vertex of hex polygon, nudged down
+    const topRight = pts.reduce(
+      (best: { x: number; y: number }, p: { x: number; y: number }) =>
+        p.x - p.y > best.x - best.y ? p : best,
+      pts[0],
+    );
+    topRight.y += 20;
+
+    const g = svgDocRef.createElementNS("http://www.w3.org/2000/svg", "g");
+    g.setAttribute("data-note-badge", hexId);
+    g.setAttribute("pointer-events", "none");
+
+    const circle = svgDocRef.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle",
+    );
+    circle.setAttribute("cx", String(topRight.x));
+    circle.setAttribute("cy", String(topRight.y));
+    circle.setAttribute("r", "22");
+    circle.setAttribute("fill", "#4a7c59");
+    circle.setAttribute("stroke", "#fff");
+    circle.setAttribute("stroke-width", "2");
+
+    // Pencil icon (simplified path)
+    const icon = svgDocRef.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "text",
+    );
+    icon.setAttribute("x", String(topRight.x));
+    icon.setAttribute("y", String(topRight.y));
+    icon.setAttribute("text-anchor", "middle");
+    icon.setAttribute("dominant-baseline", "central");
+    icon.setAttribute("fill", "#fff");
+    icon.setAttribute("font-size", "22");
+    icon.textContent = "\u270E"; // pencil character
+
+    g.appendChild(circle);
+    g.appendChild(icon);
+    overlayRef.appendChild(g);
+  }
+
+  function renderNotesSection(hexId: string) {
+    if (notesEditMode) {
+      const existing = hexNotes[hexId] || "";
+      sidebarNotes.innerHTML = `
+        <div class="notes-section">
+          <div class="notes-header"><h3>Referee Notes</h3></div>
+          <textarea class="notes-textarea" placeholder="Write your notes here...">${existing.replace(/</g, "&lt;")}</textarea>
+          <div class="notes-hint">Markdown supported</div>
+          <div class="notes-actions">
+            <button data-action="save">Save</button>
+            <button data-action="cancel">Cancel</button>
+          </div>
+        </div>`;
+      const textarea = sidebarNotes.querySelector(
+        ".notes-textarea",
+      ) as HTMLTextAreaElement;
+      textarea.focus();
+      textarea.addEventListener("keydown", (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          saveNote(hexId);
+        }
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          cancelNoteEdit(hexId);
+        }
+      });
+      sidebarNotes
+        .querySelector('[data-action="save"]')!
+        .addEventListener("click", () => saveNote(hexId));
+      sidebarNotes
+        .querySelector('[data-action="cancel"]')!
+        .addEventListener("click", () => cancelNoteEdit(hexId));
+    } else if (hexNotes[hexId]) {
+      sidebarNotes.innerHTML = `
+        <div class="notes-section">
+          <div class="notes-header">
+            <h3>Referee Notes</h3>
+            <button class="notes-edit-btn" aria-label="Edit notes" title="Edit notes">&#9998;</button>
+          </div>
+          <div class="notes-view">${renderMarkdown(hexNotes[hexId])}</div>
+        </div>`;
+      sidebarNotes
+        .querySelector(".notes-edit-btn")!
+        .addEventListener("click", () => {
+          trackEvent("Referee note editing", { hex: hexId });
+          notesEditMode = true;
+          renderNotesSection(hexId);
+        });
+    } else {
+      sidebarNotes.innerHTML = `
+        <div class="notes-section">
+          <button class="notes-add-btn">+ Add Referee notes</button>
+        </div>`;
+      sidebarNotes
+        .querySelector(".notes-add-btn")!
+        .addEventListener("click", () => {
+          trackEvent("Referee note started", { hex: hexId });
+          notesEditMode = true;
+          renderNotesSection(hexId);
+        });
+    }
+  }
+
+  function saveNote(hexId: string) {
+    const textarea = sidebarNotes.querySelector(
+      ".notes-textarea",
+    ) as HTMLTextAreaElement | null;
+    const text = textarea ? textarea.value.trim() : "";
+    if (text) {
+      hexNotes[hexId] = text;
+    } else {
+      delete hexNotes[hexId];
+    }
+    saveNotes();
+    notesEditMode = false;
+    renderNotesSection(hexId);
+    updateNoteBadge(hexId);
+    trackEvent("Referee note saved", {
+      hex: hexId,
+      action: text ? "save" : "delete",
+    });
+  }
+
+  function cancelNoteEdit(hexId: string) {
+    notesEditMode = false;
+    renderNotesSection(hexId);
+  }
+
+  function openSidebar(hexId: string, { skipTracking = false } = {}) {
+    if (!skipTracking) trackEvent("Hex opened", { hex: hexId });
+    sidebarTitle.innerHTML =
+      hexId +
+      (HEX_PAGES[hexId]
+        ? ` <span class="hex-page-ref"><abbr data-tooltip="Dolmenwood Campaign Book">DCB</abbr> p. ${HEX_PAGES[hexId]}</span>`
+        : "");
+    updateSidebarExploration(hexId);
+    const poiList = POIS[hexId];
+    const mods = MODULES[hexId];
+    const sidebarPois = document.getElementById("sidebar-pois") as HTMLElement;
+    if (poiList && poiList.length > 0) {
+      sidebarPois.innerHTML = poiList
+        .map((p: any) => {
+          const catLabel =
+            p.category === "settlement"
+              ? "Settlement"
+              : p.category === "castle"
+                ? "Castle / Keep"
+                : "Point of Interest";
+          return `<div class="poi"><h3>${p.name}</h3><div class="poi-meta">${catLabel}</div></div>`;
+        })
+        .join("");
+    } else {
+      sidebarPois.innerHTML = "";
+    }
+    notesEditMode = false;
+    renderNotesSection(hexId);
+    let html = "";
+    if (mods && mods.length > 0) {
+      html += [...mods]
+        .sort((a, b) =>
+          a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+        )
+        .map((m) => {
+          const levelsHtml = `${m.levels ? `Levels ${m.levels}` : ""}${m.levels && m.estimated ? " · " : ""}${m.estimated ? `<span class="module-estimated" data-tooltip="Estimates are a guess based on whatever information is available (which is sometimes very little). You can contact me to correct this.">Estimated to be in this hex</span>` : ""}`;
+          const linksHtml = [...m.links]
+            .sort((a, b) =>
+              a.label.toLowerCase().localeCompare(b.label.toLowerCase()),
+            )
+            .map((l) => `<a href="${l.url}" target="_blank">${l.label}</a>`)
+            .join(" · ");
+          return `
+        <div class="module">
+          <h3><a href="${preferredLink(m.links).url}" target="_blank">${m.name}</a>${m.official ? ` <span class="adv-official" data-tooltip="Published by Necrotic Gnome">Official</span>` : ""}${m.ose ? ` <span class="adv-ose" data-tooltip="Old-School Essentials adventure (not Dolmenwood-specific)">OSE</span>` : ""}</h3>
+          <div class="module-meta">
+            <span class="module-levels">${levelsHtml}</span>
+            <span class="module-links">${linksHtml}</span>
+          </div>
+          <div class="module-desc">${m.descriptionHtml}</div>
+        </div>
+      `;
+        })
+        .join("");
+    }
+    sidebarContent.innerHTML = html;
+    sidebarContent.querySelectorAll("a").forEach((a) => (a.target = "_blank"));
+    sidebarContent.querySelectorAll(".module h3 a").forEach((a) => {
+      a.addEventListener("click", () => {
+        trackEvent("Module clicked", {
+          name: a.textContent,
+          link: "title",
+          source: "sidebar",
+        });
+      });
+    });
+    sidebarContent.querySelectorAll(".module-links a").forEach((a) => {
+      a.addEventListener("click", () => {
+        trackEvent("Module clicked", {
+          name: a.textContent,
+          link: "store",
+          source: "sidebar",
+        });
+      });
+    });
+    sidebarContent.querySelectorAll(".hex-link").forEach((a) => {
+      a.addEventListener("click", () => {
+        const hex = (a as HTMLAnchorElement).href?.split("hex=")[1];
+        if (hex) trackEvent("Hex link clicked", { hex, source: "sidebar" });
+      });
+    });
+    sidebar.classList.add("open");
+    document.body.classList.add("sidebar-open");
+    sidebar.focus();
+    history.replaceState(null, "", "#hex=" + hexId);
+  }
+
+  // --- Deep-linking ---
+  function openFromHash(isInitial?: boolean) {
+    const match = location.hash.match(/^#hex=(\d{4})$/);
+    if (match) {
+      if (isInitial) trackEvent("Deep link arrival", { hex: match[1] });
+      selectHex(match[1]);
+      openSidebar(match[1]);
+    }
+  }
+
+  window.addEventListener("hashchange", () => openFromHash());
+
+  // --- SVG load: inject badges and click handlers ---
+  (document.getElementById("map") as HTMLObjectElement).addEventListener(
+    "load",
+    function () {
+      const svgDoc = this.contentDocument!;
+      svgDocRef = svgDoc;
+      const svgRoot = svgDoc.documentElement;
+      const overlay =
+        svgDoc.querySelector(".hex-overlay") ||
+        svgDoc.querySelector('[class*="hex-overlay"]');
+      if (!overlay) {
+        console.error("No .hex-overlay group found in SVG");
+        return;
+      }
+      overlayRef = overlay;
+
+      // Strip fill:none from SVG's own style so fill attributes work
+      svgDoc.querySelectorAll("style").forEach((s: HTMLStyleElement) => {
+        s.textContent = (s.textContent ?? "").replace(
+          /fill\s*:\s*none\s*;?/g,
+          "",
+        );
+      });
+
+      // Inject hover style into SVG
+      const hoverStyle = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "style",
+      );
+      hoverStyle.textContent = `.hex-overlay polygon{pointer-events:all;cursor:pointer}.hex-overlay polygon:hover{fill:${HOVER_FILL};fill-opacity:1}.visited-hatch{pointer-events:none;fill:url(#crosshatch-visited);fill-opacity:1}.partial-hatch{pointer-events:none;fill:url(#stipple-partial);fill-opacity:1}`;
+      svgRoot.prepend(hoverStyle);
+
+      // Create SVG filters (native SVG <filter> for Safari compatibility).
+      const defs = svgDoc.createElementNS("http://www.w3.org/2000/svg", "defs");
+
+      // Green tint for geography
+      const greenFilter = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "filter",
+      );
+      greenFilter.setAttribute("id", "light-green");
+      greenFilter.setAttribute("color-interpolation-filters", "sRGB");
+      const feGreen = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feColorMatrix",
+      );
+      feGreen.setAttribute("type", "matrix");
+      // Shift channels toward earthy green
+      feGreen.setAttribute(
+        "values",
+        "0.35 0.30 0.10 0 0.02 " +
+          "0.15 0.55 0.15 0 0.08 " +
+          "0.10 0.12 0.22 0 0.00 " +
+          "0    0    0    1 0",
+      );
+      greenFilter.appendChild(feGreen);
+      defs.appendChild(greenFilter);
+
+      // Drop shadow for hex polygons
+      const shadowFilter = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "filter",
+      );
+      shadowFilter.setAttribute("id", "hex-shadow");
+      // Blur source alpha into a shadow shape
+      const feBlur = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feGaussianBlur",
+      );
+      feBlur.setAttribute("in", "SourceAlpha");
+      feBlur.setAttribute("stdDeviation", "4");
+      feBlur.setAttribute("result", "blur");
+      const feOffset = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feOffset",
+      );
+      feOffset.setAttribute("in", "blur");
+      feOffset.setAttribute("dx", "3");
+      feOffset.setAttribute("dy", "4");
+      feOffset.setAttribute("result", "shifted");
+      // Tint the shadow
+      const feFlood = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feFlood",
+      );
+      feFlood.setAttribute("flood-color", "rgba(0,0,0,0.3)");
+      feFlood.setAttribute("result", "color");
+      const feIn = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feComposite",
+      );
+      feIn.setAttribute("in", "color");
+      feIn.setAttribute("in2", "shifted");
+      feIn.setAttribute("operator", "in");
+      feIn.setAttribute("result", "shadow");
+      // Threshold SourceAlpha to fully opaque so semi-transparent fills
+      // block the shadow completely instead of letting it bleed through.
+      const feThreshold = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feComponentTransfer",
+      );
+      feThreshold.setAttribute("in", "SourceAlpha");
+      feThreshold.setAttribute("result", "opaque-mask");
+      const feFuncA = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feFuncA",
+      );
+      feFuncA.setAttribute("type", "linear");
+      feFuncA.setAttribute("slope", "255");
+      feFuncA.setAttribute("intercept", "0");
+      feThreshold.appendChild(feFuncA);
+      // Cut shadow using the opaque mask
+      const feOut = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feComposite",
+      );
+      feOut.setAttribute("in", "shadow");
+      feOut.setAttribute("in2", "opaque-mask");
+      feOut.setAttribute("operator", "out");
+      feOut.setAttribute("result", "outer-shadow");
+      // Merge: shadow behind, original hex on top
+      const feMerge = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feMerge",
+      );
+      const mn1 = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feMergeNode",
+      );
+      mn1.setAttribute("in", "outer-shadow");
+      const mn2 = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feMergeNode",
+      );
+      mn2.setAttribute("in", "SourceGraphic");
+      feMerge.appendChild(mn1);
+      feMerge.appendChild(mn2);
+      [feBlur, feOffset, feFlood, feIn, feThreshold, feOut, feMerge].forEach(
+        (el) => shadowFilter.appendChild(el),
+      );
+      defs.appendChild(shadowFilter);
+
+      // Blur filter for active hex shadow clone (stroke-only)
+      const activeBlur = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "filter",
+      );
+      activeBlur.setAttribute("id", "active-hex-blur");
+      const feActiveBlur = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "feGaussianBlur",
+      );
+      feActiveBlur.setAttribute("stdDeviation", "5");
+      activeBlur.appendChild(feActiveBlur);
+      defs.appendChild(activeBlur);
+
+      // Crosshatch pattern for visited hexes
+      const crosshatch = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "pattern",
+      );
+      crosshatch.setAttribute("id", "crosshatch-visited");
+      crosshatch.setAttribute("patternUnits", "userSpaceOnUse");
+      crosshatch.setAttribute("width", "20");
+      crosshatch.setAttribute("height", "20");
+      const line1 = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line",
+      );
+      line1.setAttribute("x1", "0");
+      line1.setAttribute("y1", "0");
+      line1.setAttribute("x2", "20");
+      line1.setAttribute("y2", "20");
+      line1.setAttribute("stroke", "rgba(160,160,160,0.7)");
+      line1.setAttribute("stroke-width", "5");
+      crosshatch.appendChild(line1);
+      defs.appendChild(crosshatch);
+
+      // Stipple/dot pattern for partially explored hexes
+      const stipple = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "pattern",
+      );
+      stipple.setAttribute("id", "stipple-partial");
+      stipple.setAttribute("patternUnits", "userSpaceOnUse");
+      stipple.setAttribute("width", "18");
+      stipple.setAttribute("height", "18");
+      const dotFill = "rgba(80,180,170,0.8)";
+      [
+        [4, 4],
+        [13, 4],
+        [8.5, 10],
+        [4, 16],
+        [13, 16],
+      ].forEach(([cx, cy]) => {
+        const dot = svgDoc.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        dot.setAttribute("cx", String(cx));
+        dot.setAttribute("cy", String(cy));
+        dot.setAttribute("r", "4.5");
+        dot.setAttribute("fill", dotFill);
+        stipple.appendChild(dot);
+      });
+      defs.appendChild(stipple);
+
+      svgRoot.prepend(defs);
+
+      // Wrap hex polygons in a group so the shadow filter operates on the
+      // composite shape — shadows only appear on outer edges, not between hexes.
+      const hexGroup = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g",
+      );
+      hexGroup.setAttribute("filter", "url(#hex-shadow)");
+      overlay.querySelectorAll("[data-hex]").forEach((poly: Element) => {
+        hexGroup.appendChild(poly);
+      });
+      overlay.insertBefore(hexGroup, overlay.firstChild);
+
+      // Forward keyboard events from embedded SVG to parent handler
+      svgDoc.addEventListener("keydown", handleKeydown);
+
+      // Mute geography/grid but not hex numbers or badges
+      // Apply dark-mode inversion only to grid + geography, not labels/badges
+      const clipGroup = overlay.parentElement!;
+      const grid = clipGroup.children[0] as SVGElement | null; // <path> grid
+      const geo = clipGroup.children[1] as SVGElement | null; // <g> geography
+      const labels = clipGroup.children[2] as SVGElement | null; // <g> hex labels
+
+      // Visited-hatch group: sits between hex polygons and labels
+      visitedGroup = svgDoc.createElementNS("http://www.w3.org/2000/svg", "g");
+      if (labels) {
+        labels.parentElement!.insertBefore(visitedGroup, labels);
+      } else {
+        overlay.appendChild(visitedGroup);
+      }
+
+      const POI_COLOR = ACCENT_GREEN;
+      const poiMarkers: SVGElement[] = [];
+      function applyMapStyles() {
+        if (grid) {
+          grid.style.strokeWidth = "3";
+        }
+        if (geo) {
+          geo.setAttribute("filter", "url(#light-green)");
+          geo.style.opacity = "0.9";
+        }
+        if (labels) {
+          labels.style.fill = "#000000";
+          labelBgs.forEach(({ rect }) => {
+            rect.setAttribute("fill", "rgba(213,227,204,0.75)");
+          });
+        }
+        poiMarkers.forEach((m) => m.setAttribute("fill", POI_COLOR));
+      }
+
+      // Label sizing + background rects
+      const labelBgs: Array<{ rect: SVGRectElement; text: SVGTextElement }> =
+        [];
+      if (labels) {
+        let labelSize =
+          parseInt(localStorage.getItem("map-label-size") ?? "", 10) ||
+          DEFAULT_LABEL_SIZE;
+        labels.style.fontSize = labelSize + "px";
+        // Safari doesn't support dominant-baseline:hanging reliably.
+        // Switch to alphabetic baseline with a dy shift instead.
+        labels.style.dominantBaseline = "auto";
+        labels.querySelectorAll("text").forEach((t: Element) => {
+          t.setAttribute("dy", "0.8em");
+        });
+
+        const bgGroup = svgDoc.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "g",
+        );
+        clipGroup.insertBefore(bgGroup, labels);
+
+        const PAD = 6;
+        labels.querySelectorAll("text").forEach((t: SVGTextElement) => {
+          const rect = svgDoc.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "rect",
+          );
+          rect.setAttribute("rx", "4");
+          bgGroup.appendChild(rect);
+          labelBgs.push({ rect, text: t });
+        });
+
+        function updateLabelBgs() {
+          labelBgs.forEach(({ rect, text }) => {
+            const bb = text.getBBox();
+            rect.setAttribute("x", String(bb.x - PAD));
+            rect.setAttribute("y", String(bb.y - PAD));
+            rect.setAttribute("width", String(bb.width + PAD * 2));
+            rect.setAttribute("height", String(bb.height + PAD * 2));
+          });
+        }
+        updateLabelBgs();
+
+        setLabelSize = function (size: number) {
+          labelSize = Math.max(12, Math.min(120, size));
+          labels.style.fontSize = labelSize + "px";
+          localStorage.setItem("map-label-size", String(labelSize));
+          schedulePush();
+          updateLabelBgs();
+        };
+        getLabelSize = function () {
+          return labelSize;
+        };
+      }
+
+      // --- POI markers (rendered first so badges appear on top) ---
+      const POI_SIZE = 84;
+      // Two-house silhouette, centered at origin (~38x32 units)
+      const HOUSE_PATH =
+        "M -18,12 V 2 L -10,-6 L -2,2 V 12 Z M -13,12 V 7 A 3,3 0 0,1 -7,7 V 12 Z M 0,12 V -2 L 10,-12 L 20,-2 V 12 Z M 7,12 V 5 A 3,3 0 0,1 13,5 V 12 Z";
+      // Castle with crenellations and central tower, arch cutout
+      const CASTLE_PATH =
+        "M -20,14 V -2 H -18 V -8 H -14 V -2 H -11 V -8 H -7 V -2 H -6 L 0,-16 L 6,-2 H 7 V -8 H 11 V -2 H 14 V -8 H 18 V -2 H 20 V 14 Z M -2.5,14 V 6 A 2.5,2.5 0 0,1 2.5,6 V 14 Z";
+      // 5-point star, centered at origin (~24x24 units)
+      const STAR_PATH =
+        "M 0,-12 L 3.5,-4 L 12,-4 L 5.5,2 L 7.5,11 L 0,6 L -7.5,11 L -5.5,2 L -12,-4 L -3.5,-4 Z";
+      const POI_PATHS = {
+        settlement: HOUSE_PATH,
+        castle: CASTLE_PATH,
+        poi: STAR_PATH,
+      };
+
+      Object.keys(POIS).forEach((hexId) => {
+        const poly = svgDoc.querySelector(`[data-hex="${hexId}"]`);
+        if (!poly) return;
+
+        const pts = poly
+          .getAttribute("points")!
+          .trim()
+          .split(/\s+/)
+          .map((p: string) => {
+            const [x, y] = p.split(",").map(Number);
+            return { x, y };
+          });
+        const cx =
+          pts.reduce((s: number, p: { x: number }) => s + p.x, 0) / pts.length;
+        const cy =
+          pts.reduce((s: number, p: { y: number }) => s + p.y, 0) / pts.length;
+
+        const hasBadge = !!MODULES[hexId];
+        const poiCount = POIS[hexId].length;
+        const totalItems = poiCount + (hasBadge ? 1 : 0);
+        const SPACING = 85;
+        const startX = cx - ((totalItems - 1) * SPACING) / 2;
+
+        POIS[hexId].forEach((poi: any, idx: number) => {
+          const bx = startX + idx * SPACING;
+          const by = cy;
+          const pathData =
+            POI_PATHS[poi.category as keyof typeof POI_PATHS] || STAR_PATH;
+          const scale = POI_SIZE / 36;
+
+          const marker = svgDoc.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "path",
+          );
+          marker.setAttribute("d", pathData);
+          marker.setAttribute(
+            "transform",
+            `translate(${bx} ${by}) scale(${scale})`,
+          );
+          marker.setAttribute("fill-rule", "evenodd");
+          marker.setAttribute("stroke", "none");
+          marker.setAttribute("pointer-events", "none");
+          poiMarkers.push(marker);
+          overlay.appendChild(marker);
+        });
+      });
+
+      // Set initial POI colors based on current theme
+      applyMapStyles();
+
+      // --- Module badges (rendered after POIs so they appear on top) ---
+      Object.keys(MODULES).forEach((hexId) => {
+        const poly = svgDoc.querySelector(`[data-hex="${hexId}"]`);
+        if (!poly) {
+          console.warn("No polygon for hex", hexId);
+          return;
+        }
+
+        const count = MODULES[hexId].length;
+
+        const pts = poly
+          .getAttribute("points")!
+          .trim()
+          .split(/\s+/)
+          .map((p: string) => {
+            const [x, y] = p.split(",").map(Number);
+            return { x, y };
+          });
+        const cx =
+          pts.reduce((s: number, p: { x: number }) => s + p.x, 0) / pts.length;
+        const cy =
+          pts.reduce((s: number, p: { y: number }) => s + p.y, 0) / pts.length;
+
+        const poiCount = POIS[hexId] ? POIS[hexId].length : 0;
+        const totalItems = poiCount + 1;
+        const SPACING = 85;
+        const startX = cx - ((totalItems - 1) * SPACING) / 2;
+        const bx = startX + poiCount * SPACING;
+        const by = cy;
+
+        const g = svgDoc.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("class", "module-badge");
+        g.setAttribute("data-badge-hex", hexId);
+        g.setAttribute("pointer-events", "none");
+
+        const circle = svgDoc.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "circle",
+        );
+        circle.setAttribute("cx", String(bx));
+        circle.setAttribute("cy", String(by));
+        circle.setAttribute("r", "36");
+        circle.setAttribute("fill", MODULE_BADGE_COLOR);
+        circle.setAttribute("stroke", "#fff");
+        circle.setAttribute("stroke-width", "3");
+
+        const text = svgDoc.createElementNS(
+          "http://www.w3.org/2000/svg",
+          "text",
+        );
+        text.setAttribute("x", String(bx));
+        text.setAttribute("y", String(by));
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("dominant-baseline", "central");
+        text.setAttribute("fill", "#fff");
+        text.setAttribute("font-size", "40");
+        text.setAttribute("font-family", "system-ui, sans-serif");
+        text.setAttribute("font-weight", "bold");
+        text.textContent = String(count);
+
+        g.appendChild(circle);
+        g.appendChild(text);
+        overlay.appendChild(g);
+      });
+
+      svgDoc.querySelectorAll("[data-hex]").forEach((poly) => {
+        const hexId = (poly as HTMLElement).dataset.hex!;
+        hexPolys[hexId] = poly as unknown as SVGPolygonElement;
+
+        // Apply terrain color from hex color data (or none for uncolored hexes)
+        if (HEX_COLORS[hexId]) {
+          poly.setAttribute("fill", HEX_COLORS[hexId]);
+          poly.setAttribute("fill-opacity", "0.4");
+        } else {
+          poly.setAttribute("fill", "none");
+        }
+
+        const poiList = POIS[hexId];
+        const mods = MODULES[hexId];
+        poly.addEventListener("mouseenter", (e) => {
+          let html = "";
+          const vState = visitedHexes.get(hexId);
+          if (vState) {
+            const label =
+              vState === "partial" ? "Partially explored" : "Fully explored";
+            html += `<div class="tt-state">${label}</div>`;
+          }
+          if (poiList) {
+            html += poiList
+              .map((p: any) => {
+                const catLabel =
+                  p.category === "settlement"
+                    ? "Settlement"
+                    : p.category === "castle"
+                      ? "Castle / Keep"
+                      : "POI";
+                return `<div><span class="tt-name">${p.name}</span><span class="tt-cat">${catLabel}</span></div>`;
+              })
+              .join("");
+          }
+          if (mods) {
+            html += mods
+              .map((m: any) => {
+                let line = `<span class="tt-name">${m.name}</span>`;
+                if (m.levels)
+                  line += `<span class="tt-level">Lv ${m.levels}</span>`;
+                return `<div>${line}</div>`;
+              })
+              .join("");
+          }
+          if (hexNotes[hexId]) {
+            html += `<div><span class="tt-name" style="color:#7cb88c">Has Referee notes</span></div>`;
+          }
+          if (!html) return;
+          tooltip.innerHTML = html;
+          tooltip.style.display = "block";
+          const rect = mapObj.getBoundingClientRect();
+          const me = e as MouseEvent;
+          tooltip.style.left = rect.left + me.clientX + 12 + "px";
+          tooltip.style.top = rect.top + me.clientY - 12 + "px";
+        });
+        poly.addEventListener("mousemove", (e) => {
+          if (tooltip.style.display === "none") return;
+          const me = e as MouseEvent;
+          const rect = mapObj.getBoundingClientRect();
+          tooltip.style.left = rect.left + me.clientX + 12 + "px";
+          tooltip.style.top = rect.top + me.clientY - 12 + "px";
+        });
+        poly.addEventListener("mouseleave", () => {
+          tooltip.style.display = "none";
+        });
+
+        poly.addEventListener("click", () => {
+          selectHex(hexId);
+          openSidebar(hexId);
+        });
+      });
+      allHexIds = Object.keys(hexPolys).sort();
+
+      // --- DM Note badges ---
+      Object.keys(hexNotes).forEach((hexId) => updateNoteBadge(hexId));
+
+      // Apply visited state from localStorage
+      visitedHexes.forEach((state, hexId) => applyVisitedOverlay(hexId, state));
+
+      // --- Search ---
+      const hexSearch = document.getElementById(
+        "hex-search",
+      ) as HTMLInputElement;
+
+      const PLACEHOLDER_FULL = hexSearch.placeholder;
+      const PLACEHOLDER_SHORT = "\u{1F50D} Search\u2026";
+      function updateSearchPlaceholder() {
+        hexSearch.placeholder =
+          window.innerWidth <= 500 ? PLACEHOLDER_SHORT : PLACEHOLDER_FULL;
+      }
+      updateSearchPlaceholder();
+      window.addEventListener("resize", updateSearchPlaceholder);
+
+      hexSearch.addEventListener("input", () => {
+        const q = hexSearch.value;
+        const isNumeric = /^\d+$/.test(q);
+
+        // Clear nav cursor when searching
+        if (currentHex && hexPolys[currentHex]) {
+          hexPolys[currentHex].style.stroke = "";
+          hexPolys[currentHex].style.strokeWidth = "";
+        }
+        if (activeHexShadow) {
+          activeHexShadow.remove();
+          activeHexShadow = null;
+        }
+        currentHex = null;
+
+        // Highlight hex polygons for numeric queries
+        if (isNumeric && q.length > 0) {
+          Object.entries(hexPolys).forEach(([hexId, poly]) => {
+            const match = hexId.startsWith(q);
+            poly.style.fill = match ? SEARCH_HIGHLIGHT : "";
+            poly.style.fillOpacity = match ? "1" : "";
+          });
+        } else {
+          clearHexHighlights();
+        }
+
+        // Search and render dropdown
+        const results = searchEntries(q, SEARCH_INDEX);
+        renderSearchResults(results);
+      });
+
+      hexSearch.addEventListener("keydown", (e) => {
+        if (!isSearchDropdownOpen()) {
+          // Legacy: Enter on 4-digit hex still works even without dropdown
+          if (e.key === "Enter" && /^\d{4}$/.test(hexSearch.value)) {
+            const hexId = hexSearch.value;
+            trackEvent("Search", { query: hexId, type: "hex", hex: hexId });
+            clearHexHighlights();
+            if (hexPolys[hexId]) selectHex(hexId);
+            if (POIS[hexId] || MODULES[hexId]) {
+              openSidebar(hexId);
+            }
+            hexSearch.value = "";
+            hexSearch.blur();
+          }
+          return;
+        }
+
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          const next =
+            searchSelectedIdx < currentSearchResults.length - 1
+              ? searchSelectedIdx + 1
+              : 0;
+          updateSearchSelection(next);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          const prev =
+            searchSelectedIdx > 0
+              ? searchSelectedIdx - 1
+              : currentSearchResults.length - 1;
+          updateSearchSelection(prev);
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (
+            searchSelectedIdx >= 0 &&
+            currentSearchResults[searchSelectedIdx]
+          ) {
+            selectSearchResult(currentSearchResults[searchSelectedIdx]);
+          } else if (currentSearchResults.length > 0) {
+            selectSearchResult(currentSearchResults[0]);
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          closeSearchDropdown();
+        }
+      });
+
+      // Close search dropdown on click outside
+      document.addEventListener("click", (e) => {
+        const container = document.getElementById("search-container")!;
+        if (isSearchDropdownOpen() && !container.contains(e.target as Node)) {
+          closeSearchDropdown();
+        }
+      });
+
+      // Open from hash after badges/handlers are ready (skip animation)
+      sidebar.style.transition = "none";
+      openFromHash(true);
+      requestAnimationFrame(() => {
+        sidebar.style.transition = "";
+      });
+    },
+  );
+
+  document.querySelectorAll("#adventure-list .adv-name a").forEach((a) => {
+    a.addEventListener("click", () => {
+      trackEvent("Module clicked", {
+        name: a.textContent,
+        link: "title",
+        source: "adventure-list",
+      });
+    });
+  });
+  document.querySelectorAll("#adventure-list .hex-link").forEach((a) => {
+    a.addEventListener("click", () => {
+      const hex = (a as HTMLAnchorElement).href?.split("hex=")[1];
+      if (hex)
+        trackEvent("Hex link clicked", { hex, source: "adventure-list" });
+    });
+  });
+  document.querySelectorAll("#adventure-list .adv-links a").forEach((a) => {
+    a.addEventListener("click", () => {
+      trackEvent("Module clicked", {
+        name: a.textContent,
+        link: "store",
+        source: "adventure-list",
+      });
+    });
+  });
+  document.querySelectorAll("#adventure-list .adv-entry").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      if ((details as HTMLDetailsElement).open) {
+        const name = details.querySelector(".adv-name a")?.textContent || "";
+        trackEvent("Adventure expanded", { name });
+      }
+    });
+  });
+  // Prevent levels, location, and official badge from toggling the details
+  document
+    .querySelectorAll(
+      "#adventure-list .adv-levels, #adventure-list .adv-location, #adventure-list .adv-official, #adventure-list .adv-ose",
+    )
+    .forEach((el) => {
+      el.addEventListener("click", (e) => {
+        if (!(e.target as HTMLElement)?.closest(".hex-link"))
+          e.preventDefault();
+      });
+    });
+
+  // Track + hide "See all modules" link
+  const seeModules = document.getElementById("see-modules") as HTMLElement;
+  seeModules.addEventListener("click", () => {
+    trackEvent("All modules clicked");
+  });
+  mapContainer.addEventListener(
+    "scroll",
+    () => {
+      seeModules.style.display = mapContainer.scrollTop > 100 ? "none" : "";
+    },
+    { passive: true },
+  );
+</script>

@@ -1,0 +1,112 @@
+---
+import BaseMinimal from "../../../layouts/BaseMinimal.astro";
+import {
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  SUPABASE_ENABLED,
+} from "../../../lib/config";
+---
+
+<BaseMinimal title="Signing in..." description="OAuth callback handler">
+  <style is:inline>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #d5e3cc;
+      font-family: system-ui, sans-serif;
+      color: #4a3c2a;
+    }
+
+    .consent-msg {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .consent-msg p {
+      margin: 0.5rem 0;
+    }
+
+    .error {
+      color: #c0392b;
+    }
+  </style>
+  <div class="consent-msg">
+    <p id="status">Completing sign-in...</p>
+  </div>
+</BaseMinimal>
+
+{
+  SUPABASE_ENABLED && (
+    <script
+      is:inline
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"
+    />
+  )
+}
+
+<script
+  is:inline
+  define:vars={{
+    supabaseUrl: SUPABASE_URL,
+    supabaseKey: SUPABASE_PUBLISHABLE_KEY,
+  }}
+>
+  (async function () {
+    const statusEl = document.getElementById("status");
+    try {
+      if (!supabaseUrl || !supabaseKey) {
+        statusEl.innerHTML =
+          '<span class="error">Sign-in is not configured for this deployment. <a href="../">Return to map</a></span>';
+        return;
+      }
+      if (!window.supabase) {
+        statusEl.innerHTML =
+          '<span class="error">Failed to load auth library. <a href="../">Return to map</a></span>';
+        return;
+      }
+      const sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+      // Handle PKCE code exchange if present
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+      if (code) {
+        const { error } = await sb.auth.exchangeCodeForSession(code);
+        if (error) {
+          statusEl.innerHTML =
+            '<span class="error">Sign-in failed: ' +
+            error.message +
+            '. <a href="../">Return to map</a></span>';
+          return;
+        }
+      }
+
+      // Also handle hash-based tokens (implicit flow fallback)
+      if (window.location.hash) {
+        // Supabase client auto-detects hash tokens on init; give it a moment
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      // Verify we have a session
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+      if (session) {
+        // Navigate to map: works on both dolmenwood subdomain (/) and main domain (/map/)
+        const mapUrl = window.location.pathname.replace(
+          /oauth\/consent\/?$/,
+          "",
+        );
+        window.location.replace(mapUrl);
+      } else {
+        statusEl.innerHTML =
+          '<span class="error">Could not complete sign-in. <a href="../">Return to map</a></span>';
+      }
+    } catch {
+      statusEl.innerHTML =
+        '<span class="error">Something went wrong. <a href="../">Return to map</a></span>';
+    }
+  })();
+</script>

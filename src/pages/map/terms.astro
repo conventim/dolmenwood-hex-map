@@ -1,0 +1,103 @@
+---
+import BaseMinimal from "../../layouts/BaseMinimal.astro";
+---
+
+<BaseMinimal
+  title="Terms of Service"
+  description="Terms of service for the Dolmenwood Hex Map"
+>
+  <style is:inline>
+    body {
+      background: #d5e3cc;
+      margin: 0;
+      font:
+        15px/1.6 system-ui,
+        sans-serif;
+      color: #4a3c2a;
+    }
+
+    main {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #2c1e0e;
+      margin: 0 0 8px;
+    }
+
+    .date {
+      font-size: 12px;
+      color: #5c4e3a;
+      margin-bottom: 32px;
+    }
+
+    h2 {
+      font-size: 17px;
+      color: #2c1e0e;
+      margin: 28px 0 8px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    a {
+      color: #7a5232;
+    }
+
+    .back {
+      margin-top: 40px;
+      font-size: 13px;
+    }
+
+    .back a {
+      color: #5c4e3a;
+    }
+  </style>
+  <main>
+    <h1>Terms of Service</h1>
+    <p class="date">Last updated: February 22, 2026</p>
+
+    <h2>The basics</h2>
+    <p>
+      This is a fan project. It is not affiliated with or endorsed by Necrotic
+      Gnome or any game publisher. The Dolmenwood Hex Map is provided as-is,
+      free of charge.
+    </p>
+
+    <h2>Accounts</h2>
+    <p>
+      You may optionally sign in with Discord or Google to sync your map data
+      across devices. You are responsible for your account credentials. We
+      reserve the right to terminate accounts that are abusive or violate these
+      terms.
+    </p>
+
+    <h2>Your data</h2>
+    <p>
+      Any notes, hex exploration status, or preferences you save remain yours.
+      We don't claim ownership of your content. See our
+      <a href="./privacy/">privacy policy</a> for details on data storage and deletion.
+    </p>
+
+    <h2>No warranty</h2>
+    <p>
+      This site is provided "as is" without warranty of any kind. We don't
+      guarantee uptime, data persistence, or that the map is free of errors. Use
+      at your own risk.
+    </p>
+
+    <h2>Changes</h2>
+    <p>
+      We may update these terms at any time. Continued use of the site
+      constitutes acceptance of the updated terms.
+    </p>
+
+    <p class="back">
+      <a href="./">&larr; Back to the map</a>
+    </p>
+  </main>
+</BaseMinimal>

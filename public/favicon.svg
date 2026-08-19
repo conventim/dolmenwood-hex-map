@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <style>
+      .planet { fill: #60a5fa; }
+      .ring { fill: none; stroke: #93c5fd; stroke-width: 4; }
+      @media (prefers-color-scheme: dark) {
+        .planet { fill: #93c5fd; }
+        .ring { stroke: #60a5fa; }
+      }
+    </style>
+    <clipPath id="ring-back">
+      <rect x="0" y="0" width="128" height="64" transform="rotate(-20 64 64)"/>
+    </clipPath>
+    <clipPath id="ring-front">
+      <rect x="0" y="64" width="128" height="64" transform="rotate(-20 64 64)"/>
+    </clipPath>
+  </defs>
+  <!-- ring back half -->
+  <ellipse class="ring" cx="64" cy="64" rx="62" ry="18" transform="rotate(-20 64 64)" clip-path="url(#ring-back)"/>
+  <!-- planet -->
+  <circle class="planet" cx="64" cy="64" r="40"/>
+  <!-- ring front half -->
+  <ellipse class="ring" cx="64" cy="64" rx="62" ry="18" transform="rotate(-20 64 64)" clip-path="url(#ring-front)"/>
+</svg>

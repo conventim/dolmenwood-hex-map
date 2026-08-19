@@ -1,0 +1,53 @@
+---
+import { SITE_URL, ANALYTICS_DOMAIN } from "../lib/config";
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+}
+
+const {
+  title,
+  description = "An unofficial interactive hex map for Dolmenwood",
+  ogImage,
+  canonicalUrl,
+} = Astro.props;
+const analyticsDebug = import.meta.env.ANALYTICS_DEBUG;
+const ogImageUrl =
+  ogImage && SITE_URL ? new URL(ogImage, SITE_URL).href : undefined;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+    {ogImageUrl && <meta property="og:image:width" content="1200" />}
+    {ogImageUrl && <meta property="og:image:height" content="630" />}
+    {ogImageUrl && <meta name="twitter:card" content="summary_large_image" />}
+    {ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    {
+      ANALYTICS_DOMAIN && (
+        <script
+          is:inline
+          defer
+          data-debug={analyticsDebug ? ANALYTICS_DOMAIN : undefined}
+          src="https://assets.onedollarstats.com/stonks.js"
+        />
+      )
+    }
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
