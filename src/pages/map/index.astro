@@ -4,7 +4,7 @@ import { modules } from "../../data/dolmenwood-map-modules";
 import { pois } from "../../data/map-pois";
 import { updates } from "../../data/map-updates";
 import { marked } from "marked";
-import hexColors from "../../data/hex-colors.json";
+// import hexColors from "../../data/hex-colors.json";
 import hexPages from "../../data/hex-pages.json";
 import { addAbbrTags, linkifyHexRefs } from "../../lib/map/text-transforms";
 import { CANONICAL_URL, contactEmailWithTag } from "../../lib/config";
@@ -62,7 +62,7 @@ for (const poi of pois) {
 
 const modulesJson = JSON.stringify(hexModules);
 const poisJson = JSON.stringify(hexPois);
-const hexColorsJson = JSON.stringify(hexColors);
+const hexColorsJson = JSON.stringify({});
 const hexPagesJson = JSON.stringify(hexPages);
 const updatesJson = JSON.stringify(updates);
 
@@ -121,7 +121,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   <style is:inline>
     /* Theme custom properties — organic earth-tone palette */
     :root {
-      --map-body-bg: #d5e3cc;
+      --map-body-bg: #d3d3d3;
       --sidebar-bg: #faf7f0;
       --sidebar-text: #4a3c2a;
       --sidebar-heading: #2c1e0e;
@@ -211,6 +211,12 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     #tooltip .tt-name {
       font-weight: 600;
       color: var(--tooltip-name);
+    }
+
+    #tooltip .tt-hex {
+      color: #000;
+      font-weight: 700;
+      margin-bottom: 4px;
     }
 
     #tooltip .tt-level {
@@ -374,6 +380,13 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       overflow-wrap: break-word;
     }
 
+    .notes-title-view {
+      color: var(--sidebar-heading);
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
     .notes-view h1,
     .notes-view h2,
     .notes-view h3,
@@ -458,6 +471,60 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       font-size: 11px;
       color: var(--sidebar-levels);
       margin: 4px 0 0;
+    }
+
+    .notes-category-label {
+      display: block;
+      color: var(--sidebar-levels);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .notes-title-label {
+      display: block;
+      color: var(--sidebar-levels);
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .notes-title {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 4px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
+    .notes-category {
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 4px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      font-size: 13px;
+    }
+
+    .notes-color-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: -2px 0 8px;
+      color: var(--sidebar-levels);
+      font-size: 12px;
+    }
+
+    .notes-color-swatch {
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgb(0 0 0 / 25%);
+      border-radius: 3px;
+      box-sizing: border-box;
     }
 
     .notes-actions {
@@ -1219,10 +1286,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       #kbd-hint {
         display: none;
       }
-
-      #tooltip {
-        display: none !important;
-      }
     }
 
     /* Adventure list below map */
@@ -1396,7 +1459,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         aria-label="Interactive hex map of Dolmenwood"
         >Dolmenwood hex map</object
       >
-      <div id="adventure-list">
+      <!-- <div id="adventure-list">
         <h2>Modules</h2>
         {
           adventureList.map((adv) => (
@@ -1469,9 +1532,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
             </details>
           ))
         }
-      </div>
+      </div> -->
       <footer id="map-footer">
-        <strong>Dolmenwood Hex Map</strong>
+        <!-- <strong>Dolmenwood Hex Map</strong>
         <br />
         Interactive hex map for exploring the Dolmenwood RPG setting, with module
         locations and cloud-synced notes.
@@ -1480,7 +1543,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         <br />
         <a href="./privacy/">Privacy</a>
         <span aria-hidden="true">·</span>
-        <a href="./terms/">Terms</a>
+        <a href="./terms/">Terms</a> -->
       </footer>
     </div>
   </main>
@@ -1489,7 +1552,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       <input
         id="hex-search"
         type="text"
-        placeholder="🔍 Search hex, module, or place…"
+        placeholder="🔍 Search…"
         autocomplete="off"
         role="combobox"
         aria-expanded="false"
@@ -1499,7 +1562,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       />
       <ul id="search-results" role="listbox"></ul>
     </div>
-    <a id="see-modules" href="#adventure-list">↳ All modules</a>
+    <!-- <a id="see-modules" href="#adventure-list">↳ All modules</a> -->
   </div>
   <div
     id="hex-progress"
@@ -1536,7 +1599,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       >
     </div>
   </div>
-  <button
+  <!-- <button
     id="updates-bell"
     aria-label="Updates"
     data-tooltip="Recent updates to the map"
@@ -1554,8 +1617,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg
     >
     <span id="updates-dot"></span>
-  </button>
-  <button
+  </button> -->
+  <!-- <button
     id="auth-btn"
     aria-label="Sign in for cloud sync"
     data-tooltip="Sign in to sync data across devices"
@@ -1574,11 +1637,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         cy="7"
         r="4"></circle></svg
     >
-  </button>
-  <div id="kbd-hint">
+  </button> -->
+  <!-- <div id="kbd-hint">
     <span>Press <kbd>?</kbd> for keyboard shortcuts</span>
     <a id="contact-link">About / Add / Correct / Contact</a>
-  </div>
+  </div> -->
   <div id="updates-overlay" class="modal-overlay" style="display:none">
     <div id="updates-box" class="modal-box">
       <h3>Updates</h3>
@@ -1742,10 +1805,17 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
 <script>
   /* eslint-disable @typescript-eslint/no-explicit-any */
   import { renderMarkdown } from "../../lib/map/markdown";
-  import { buildSearchIndex, searchEntries } from "../../lib/map/search";
   import {
-    navigateHex,
-    nextVisitedState,
+    buildSearchIndex,
+    numericHexMatches,
+    searchEntries,
+  } from "../../lib/map/search";
+  // import {
+  //   navigateHex,
+  //   nextVisitedState,
+  //   countProgress,
+  // } from "../../lib/map/hex-nav";
+    import {
     countProgress,
   } from "../../lib/map/hex-nav";
   import {
@@ -1788,6 +1858,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   function initSupabase() {
     if (!window.supabase) return;
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    initSharedNotes();
     sb.auth.onAuthStateChange((event: any, session: any) => {
       if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
         if (session?.user) {
@@ -1892,6 +1963,18 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   const HOVER_FILL = "rgba(45,106,79,0.25)";
   const SEARCH_HIGHLIGHT = "rgba(45,106,79,0.4)";
   const MODULE_BADGE_COLOR = "#a0522d";
+  const NOTELESS_HEX_COLOR = "#d3d3d3";
+  const NOTE_CATEGORY_COLORS = {
+    explored: "#2d6a4f",
+    news: "#ffd000",
+    useful_places: "#2b6cb0",
+  } as const;
+  type NoteCategory = keyof typeof NOTE_CATEGORY_COLORS;
+  interface SharedNote {
+    title: string;
+    content: string;
+    category: NoteCategory;
+  }
 
   // --- Search index ---
   const SEARCH_INDEX = buildSearchIndex(
@@ -2033,20 +2116,20 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     contactOverlay.style.display =
       contactOverlay.style.display === "none" ? "flex" : "none";
   }
-  document
-    .getElementById("contact-link")!
-    .addEventListener("click", toggleContact);
+  // document
+  //   .getElementById("contact-link")!
+  //   .addEventListener("click", toggleContact);
   document
     .getElementById("contact-close")!
     .addEventListener("click", toggleContact);
   contactOverlay.addEventListener("click", (e) => {
     if (e.target === contactOverlay) toggleContact();
   });
-  document
-    .querySelector("#contact-box .btn-primary")!
-    .addEventListener("click", () => {
-      trackEvent("Contact button clicked");
-    });
+  //document
+  //  .querySelector("#contact-box .btn-primary")!
+  //  .addEventListener("click", () => {
+  //    trackEvent("Contact button clicked");
+  //  });
 
   // --- Auth overlay ---
   const authOverlay = document.getElementById("auth-overlay") as HTMLElement;
@@ -2095,7 +2178,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       authOverlay.style.display = "none";
     }
   }
-  authBtn.addEventListener("click", toggleAuth);
+  // authBtn.addEventListener("click", toggleAuth);
   document.getElementById("auth-close")!.addEventListener("click", toggleAuth);
   authOverlay.addEventListener("click", (e) => {
     if (e.target === authOverlay) toggleAuth();
@@ -2136,15 +2219,15 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   ) as HTMLElement;
   const updatesDot = document.getElementById("updates-dot") as HTMLElement;
 
-  function checkUpdatesBadge() {
-    if (!UPDATES.length) return;
-    const lastSeenId =
-      parseInt(localStorage.getItem(UPDATES_SEEN_KEY) ?? "", 10) || 0;
-    if (UPDATES[0].id > lastSeenId) {
-      updatesDot.classList.add("visible");
-    }
-  }
-  checkUpdatesBadge();
+  // function checkUpdatesBadge() {
+  //   if (!UPDATES.length) return;
+  //   const lastSeenId =
+  //     parseInt(localStorage.getItem(UPDATES_SEEN_KEY) ?? "", 10) || 0;
+  //   if (UPDATES[0].id > lastSeenId) {
+  //     updatesDot.classList.add("visible");
+  //   }
+  // }
+  // checkUpdatesBadge();
 
   function toggleUpdates() {
     if (updatesOverlay.style.display === "none") {
@@ -2189,9 +2272,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       updatesOverlay.style.display = "none";
     }
   }
-  document
-    .getElementById("updates-bell")!
-    .addEventListener("click", toggleUpdates);
+  // document
+  //   .getElementById("updates-bell")!
+  //   .addEventListener("click", toggleUpdates);
   document
     .getElementById("updates-close")!
     .addEventListener("click", toggleUpdates);
@@ -2201,11 +2284,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
 
   // --- Hex navigation state ---
   let currentHex: string | null = null;
-  let allHexIds: string[] = []; // populated after SVG load
+  // let allHexIds: string[] = []; // populated after SVG load
   const hexPolys: Record<string, SVGPolygonElement> = {}; // hexId -> polygon element
   let activeHexShadow: SVGPolygonElement | null = null; // cloned polygon for drop shadow
   let setLabelSize: ((size: number) => void) | null = null; // assigned after SVG load
-  let getLabelSize: (() => number) | null = null;
+  // let getLabelSize: (() => number) | null = null;
 
   // --- Visited hex persistence ---
   // States: "visited" (fully explored) or "partial" (partially explored)
@@ -2227,29 +2310,174 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       return new Map();
     }
   }
-  function saveVisited() {
-    localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
-    schedulePush();
-  }
+  // function saveVisited() {
+  //   localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
+  //   schedulePush();
+  // }
   let visitedHexes = loadVisited();
 
-  // --- DM Notes persistence ---
-  const NOTES_KEY = "map-hex-notes";
-  function loadNotes() {
-    try {
-      return JSON.parse(localStorage.getItem(NOTES_KEY) || "{}");
-    } catch {
-      return {};
+  // --- Shared DM notes ---
+  async function deleteNote(hexId: string) {
+    if (sb) {
+      const { error } = await sb
+        .from("hex_notes")
+        .delete()
+        .eq("hex_id", hexId);
+      if (error) {
+        console.warn("Shared note delete failed:", error.message);
+        return;
+      }
     }
+    delete hexNotes[hexId];
+    updateNoteTextLabel(hexId);
+    updateNoteFill(hexId);
   }
-  function saveNotes() {
-    localStorage.setItem(NOTES_KEY, JSON.stringify(hexNotes));
-    schedulePush();
-  }
-  let hexNotes: Record<string, string> = loadNotes();
+  let hexNotes: Record<string, SharedNote> = {};
   let notesEditMode = false;
   let svgDocRef: Document | null = null;
   let overlayRef: Element | null = null;
+  let noteLabelGroup: SVGGElement | null = null;
+  const noteLabels: Record<string, SVGTextElement> = {};
+  let noteFillGroup: SVGGElement | null = null;
+  const noteFills: Record<string, SVGPolygonElement> = {};
+
+  function updateNoteTextLabel(hexId: string) {
+    const existing = noteLabels[hexId];
+    if (existing) {
+      existing.remove();
+      delete noteLabels[hexId];
+    }
+
+    const poly = hexPolys[hexId];
+    const note = hexNotes[hexId];
+    if (!svgDocRef || !noteLabelGroup || !poly || !note) return;
+    const titleText = note.title;
+
+    const points = poly.getAttribute("points");
+    if (!points) return;
+
+    const vertices = points
+      .trim()
+      .split(/\s+/)
+      .map((point) => {
+        const [x, y] = point.split(",").map(Number);
+        return { x, y };
+      });
+    const centerX =
+      vertices.reduce((sum, point) => sum + point.x, 0) / vertices.length;
+    const centerY =
+      vertices.reduce((sum, point) => sum + point.y, 0) / vertices.length;
+    const polygonWidth =
+      Math.max(...vertices.map((point) => point.x)) -
+      Math.min(...vertices.map((point) => point.x));
+    const maxTextWidth = polygonWidth * 0.82;
+
+    const text = svgDocRef.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "text",
+    );
+    text.setAttribute("x", String(centerX));
+    text.setAttribute("y", String(centerY));
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("font-size", "28");
+    text.setAttribute("font-family", "system-ui, sans-serif");
+    text.setAttribute("fill", "#000000");
+    text.textContent = titleText;
+    noteLabelGroup.appendChild(text);
+
+    if (titleText && text.getComputedTextLength() > maxTextWidth) {
+      let visibleText = titleText;
+      do {
+        visibleText = visibleText.slice(0, -1);
+        text.textContent = visibleText + "...";
+      } while (
+        visibleText.length > 0 &&
+        text.getComputedTextLength() > maxTextWidth
+      );
+    }
+
+    noteLabels[hexId] = text;
+  }
+
+  function updateNoteFill(hexId: string) {
+    const existing = noteFills[hexId];
+    if (existing) {
+      existing.remove();
+      delete noteFills[hexId];
+    }
+    const poly = hexPolys[hexId];
+    const note = hexNotes[hexId];
+    if (!noteFillGroup || !poly || !note) return;
+
+    const fill = poly.cloneNode(false) as SVGPolygonElement;
+    fill.removeAttribute("data-hex");
+    fill.removeAttribute("class");
+    fill.style.fill = NOTE_CATEGORY_COLORS[note.category];
+    fill.style.fillOpacity = "0.35";
+    fill.style.stroke = "none";
+    fill.style.pointerEvents = "none";
+    noteFillGroup.appendChild(fill);
+    noteFills[hexId] = fill;
+  }
+
+  function applySharedNote(
+    hexId: string,
+    content: string | null,
+    category: NoteCategory = "news",
+    title: string | null = "",
+  ) {
+    const safeCategory = NOTE_CATEGORY_COLORS[category]
+      ? category
+      : "news";
+    if (content)
+      hexNotes[hexId] = {
+        title: title ?? "",
+        content,
+        category: safeCategory,
+      };
+    else delete hexNotes[hexId];
+    updateNoteTextLabel(hexId);
+    updateNoteFill(hexId);
+    updateNoteBadge(hexId);
+    if (currentHex === hexId && sidebar.classList.contains("open")) {
+      renderNotesSection(hexId);
+    }
+  }
+
+  async function initSharedNotes() {
+    if (!sb) return;
+    const { data, error } = await sb
+      .from("hex_notes")
+      .select("hex_id, title, content, category");
+    if (error) {
+      console.warn("Shared notes load failed:", error.message);
+      return;
+    }
+    hexNotes = {};
+    for (const note of data ?? []) {
+      applySharedNote(note.hex_id, note.content, note.category, note.title);
+    }
+
+    sb
+      .channel("shared-hex-notes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "hex_notes" },
+        (payload: any) => {
+          const note = payload.eventType === "DELETE" ? payload.old : payload.new;
+          if (note?.hex_id) {
+            applySharedNote(
+              note.hex_id,
+              payload.eventType === "DELETE" ? null : note.content,
+              note.category,
+              note.title,
+            );
+          }
+        },
+      )
+      .subscribe();
+  }
 
   // --- Cloud sync (last-write-wins) ---
   // On load: cloud replaces local state. On change: local overwrites cloud.
@@ -2257,7 +2485,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   function gatherSyncData() {
     return {
       visitedHexes: [...visitedHexes],
-      hexNotes: hexNotes,
       storePref: localStorage.getItem(STORE_PREF_KEY) || "",
       lastSeenUpdateId:
         parseInt(localStorage.getItem("map-updates-last-seen-id") ?? "", 10) ||
@@ -2281,11 +2508,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
       reapplyAllVisitedOverlays();
     }
-    // Cloud is source of truth for notes
-    if (cloud.hexNotes && typeof cloud.hexNotes === "object") {
-      hexNotes = cloud.hexNotes;
-      localStorage.setItem(NOTES_KEY, JSON.stringify(hexNotes));
-    }
     // Scalar prefs: cloud wins
     if (cloud.storePref !== undefined) {
       localStorage.setItem(STORE_PREF_KEY, cloud.storePref);
@@ -2300,7 +2522,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           "map-updates-last-seen-id",
           String(cloud.lastSeenUpdateId),
         );
-        checkUpdatesBadge();
+        // checkUpdatesBadge();
       }
     }
     if (cloud.labelSize && setLabelSize) {
@@ -2366,7 +2588,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         mergeCloudData(data.data);
         syncStatusEl.textContent = "Synced";
       } else {
-        // No cloud data yet — push local data up
+        // No cloud data yet - push local data up
         await pushToCloud();
       }
     } catch (err) {
@@ -2384,9 +2606,10 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
     s.onload = initSupabase;
     document.head.appendChild(s);
-  } else {
-    authBtn.style.display = "none";
   }
+  // } else {
+  //   authBtn.style.display = "none";
+  // }
 
   function updateProgress() {
     const { visited, partial } = countProgress(visitedHexes, HEX_PAGES);
@@ -2428,27 +2651,27 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     visitedOverlays[hexId] = el;
   }
 
-  function toggleVisited(hexId: string) {
-    if (!hexId) return;
-    const current = visitedHexes.get(hexId);
-    const next = nextVisitedState(current);
-    if (next) {
-      visitedHexes.set(hexId, next);
-    } else {
-      visitedHexes.delete(hexId);
-    }
-    applyVisitedOverlay(hexId, next);
-    saveVisited();
-    updateProgress();
-    // Refresh sidebar exploration badge if open
-    if (sidebar.classList.contains("open")) {
-      updateSidebarExploration(hexId);
-    }
-    trackEvent("Hex visited", {
-      hex: hexId,
-      action: next || "remove",
-    });
-  }
+  // function toggleVisited(hexId: string) {
+  //   if (!hexId) return;
+  //   const current = visitedHexes.get(hexId);
+  //   const next = nextVisitedState(current);
+  //   if (next) {
+  //     visitedHexes.set(hexId, next);
+  //   } else {
+  //     visitedHexes.delete(hexId);
+  //   }
+  //   applyVisitedOverlay(hexId, next);
+  //   saveVisited();
+  //   updateProgress();
+  //   // Refresh sidebar exploration badge if open
+  //   if (sidebar.classList.contains("open")) {
+  //     updateSidebarExploration(hexId);
+  //   }
+  //   trackEvent("Hex visited", {
+  //     hex: hexId,
+  //     action: next || "remove",
+  //   });
+  // }
 
   function updateSidebarExploration(hexId: string) {
     const el = document.getElementById("sidebar-exploration") as HTMLElement;
@@ -2464,20 +2687,20 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
   }
 
-  const NAV_KEYS = {
-    a: [-1, 0],
-    h: [-1, 0],
-    ArrowLeft: [-1, 0],
-    d: [1, 0],
-    l: [1, 0],
-    ArrowRight: [1, 0],
-    w: [0, -1],
-    k: [0, -1],
-    ArrowUp: [0, -1],
-    s: [0, 1],
-    j: [0, 1],
-    ArrowDown: [0, 1],
-  };
+  // const NAV_KEYS = {
+  //   a: [-1, 0],
+  //   h: [-1, 0],
+  //   ArrowLeft: [-1, 0],
+  //   d: [1, 0],
+  //   l: [1, 0],
+  //   ArrowRight: [1, 0],
+  //   w: [0, -1],
+  //   k: [0, -1],
+  //   ArrowUp: [0, -1],
+  //   s: [0, 1],
+  //   j: [0, 1],
+  //   ArrowDown: [0, 1],
+  // };
 
   function selectHex(hexId: string) {
     // Clear previous active hex outline
@@ -2492,7 +2715,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     currentHex = hexId;
     if (hexId && hexPolys[hexId]) {
       const poly = hexPolys[hexId];
-      poly.style.stroke = ACCENT_GREEN;
+      poly.style.stroke = "#000000";
       poly.style.strokeWidth = "6";
       // Shadow clone: stroke-only copy behind the hex, blurred via SVG filter
       activeHexShadow = poly.cloneNode() as SVGPolygonElement;
@@ -2509,20 +2732,20 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
   }
 
-  function doNavigateHex(dcol: number, drow: number) {
-    if (!allHexIds.length) return;
-    if (!currentHex) {
-      selectHex(allHexIds[0]);
-      return;
-    }
-    const target = navigateHex(
-      currentHex,
-      dcol,
-      drow,
-      new Set(Object.keys(hexPolys)),
-    );
-    if (target) selectHex(target);
-  }
+  // function doNavigateHex(dcol: number, drow: number) {
+  //   if (!allHexIds.length) return;
+  //   if (!currentHex) {
+  //     selectHex(allHexIds[0]);
+  //     return;
+  //   }
+  //   const target = navigateHex(
+  //     currentHex,
+  //     dcol,
+  //     drow,
+  //     new Set(Object.keys(hexPolys)),
+  //   );
+  //   if (target) selectHex(target);
+  // }
 
   // Search state & helpers (outer scope for handleKeydown/clearSearch access)
   let searchSelectedIdx = -1;
@@ -2620,138 +2843,138 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     openSidebar(entry.hexId);
   }
 
-  function handleKeydown(e: KeyboardEvent) {
-    const inSearch =
-      document.activeElement === document.getElementById("hex-search");
-    const inNotes =
-      document.activeElement?.classList.contains("notes-textarea");
-    const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
-    const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    if (authOverlay.style.display !== "none") {
-      if (key === "Escape") toggleAuth();
-      return;
-    }
-    if (updatesOverlay.style.display !== "none") {
-      if (key === "Escape") toggleUpdates();
-      return;
-    }
-    if (configOverlay.style.display !== "none") {
-      if (key === "Escape") toggleConfig();
-      return;
-    }
-    if (contactOverlay.style.display !== "none") {
-      if (key === "Escape") toggleContact();
-      return;
-    }
-    if (helpOverlay.style.display !== "none") {
-      if (key === "Escape" || key === "?") toggleHelp();
-      return;
-    }
-    if (key === "?" && !inSearch && !inNotes && !hasModifier) {
-      toggleHelp();
-      return;
-    }
-    if (key === "u" && !inSearch && !inNotes && !hasModifier) {
-      toggleAuth();
-      return;
-    }
-    if (key === "c" && !inSearch && !inNotes && !hasModifier) {
-      toggleConfig();
-      return;
-    }
-    if ((key === "f" || key === "/") && !inSearch && !inNotes && !hasModifier) {
-      e.preventDefault();
-      document.getElementById("hex-search")!.focus();
-      return;
-    }
-    // Hex navigation (not when typing in search or notes)
-    if (
-      !inSearch &&
-      !inNotes &&
-      !hasModifier &&
-      NAV_KEYS[key as keyof typeof NAV_KEYS]
-    ) {
-      e.preventDefault();
-      const [dc, dr] = NAV_KEYS[key as keyof typeof NAV_KEYS];
-      doNavigateHex(dc, dr);
-      return;
-    }
-    // V toggles visited state for current hex
-    if (!inSearch && !inNotes && !hasModifier && key === "v" && currentHex) {
-      toggleVisited(currentHex);
-      return;
-    }
-    // N toggles DM notes edit/save for current hex
-    if (
-      !inSearch &&
-      !inNotes &&
-      !hasModifier &&
-      key === "n" &&
-      currentHex &&
-      sidebar.classList.contains("open")
-    ) {
-      e.preventDefault();
-      if (notesEditMode) {
-        saveNote(currentHex);
-      } else {
-        notesEditMode = true;
-        renderNotesSection(currentHex);
-      }
-      return;
-    }
-    // Enter opens/refreshes sidebar for current hex (not when in search or notes)
-    if (
-      !inSearch &&
-      !inNotes &&
-      !hasModifier &&
-      key === "Enter" &&
-      currentHex
-    ) {
-      openSidebar(currentHex);
-      return;
-    }
-    if (
-      (key === "=" || key === "+" || key === "-" || key === "0") &&
-      !inSearch &&
-      !inNotes &&
-      !hasModifier &&
-      getLabelSize
-    ) {
-      e.preventDefault();
-      if (key === "0") {
-        setLabelSize!(DEFAULT_LABEL_SIZE);
-        trackEvent("Label size changed", { action: "reset" });
-      } else {
-        const delta = key === "=" || key === "+" ? 4 : -4;
-        setLabelSize!(getLabelSize!() + delta);
-        trackEvent("Label size changed", {
-          action: delta > 0 ? "increase" : "decrease",
-        });
-      }
-      return;
-    }
-    if (key === "Escape") {
-      if (isSearchDropdownOpen()) {
-        closeSearchDropdown();
-      } else if (sidebar.classList.contains("open")) {
-        closeSidebar();
-      } else {
-        clearSearch();
-      }
-    }
-  }
-  document.addEventListener("keydown", handleKeydown);
+  // function handleKeydown(e: KeyboardEvent) {
+  //   const inSearch =
+  //     document.activeElement === document.getElementById("hex-search");
+  //   const inNotes =
+  //     document.activeElement?.classList.contains("notes-textarea");
+  //   const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
+  //   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  //   if (authOverlay.style.display !== "none") {
+  //     if (key === "Escape") toggleAuth();
+  //     return;
+  //   }
+  //   if (updatesOverlay.style.display !== "none") {
+  //     if (key === "Escape") toggleUpdates();
+  //     return;
+  //   }
+  //   if (configOverlay.style.display !== "none") {
+  //     if (key === "Escape") toggleConfig();
+  //     return;
+  //   }
+  //   if (contactOverlay.style.display !== "none") {
+  //     if (key === "Escape") toggleContact();
+  //     return;
+  //   }
+  //   if (helpOverlay.style.display !== "none") {
+  //     if (key === "Escape" || key === "?") toggleHelp();
+  //     return;
+  //   }
+  //   if (key === "?" && !inSearch && !inNotes && !hasModifier) {
+  //     toggleHelp();
+  //     return;
+  //   }
+  //   if (key === "u" && !inSearch && !inNotes && !hasModifier) {
+  //     toggleAuth();
+  //     return;
+  //   }
+  //   if (key === "c" && !inSearch && !inNotes && !hasModifier) {
+  //     toggleConfig();
+  //     return;
+  //   }
+  //   if ((key === "f" || key === "/") && !inSearch && !inNotes && !hasModifier) {
+  //     e.preventDefault();
+  //     document.getElementById("hex-search")!.focus();
+  //     return;
+  //   }
+  //   // Hex navigation (not when typing in search or notes)
+  //   if (
+  //     !inSearch &&
+  //     !inNotes &&
+  //     !hasModifier &&
+  //     NAV_KEYS[key as keyof typeof NAV_KEYS]
+  //   ) {
+  //     e.preventDefault();
+  //     const [dc, dr] = NAV_KEYS[key as keyof typeof NAV_KEYS];
+  //     doNavigateHex(dc, dr);
+  //     return;
+  //   }
+  //   // V toggles visited state for current hex
+  //   if (!inSearch && !inNotes && !hasModifier && key === "v" && currentHex) {
+  //     toggleVisited(currentHex);
+  //     return;
+  //   }
+  //   // N toggles DM notes edit/save for current hex
+  //   if (
+  //     !inSearch &&
+  //     !inNotes &&
+  //     !hasModifier &&
+  //     key === "n" &&
+  //     currentHex &&
+  //     sidebar.classList.contains("open")
+  //   ) {
+  //     e.preventDefault();
+  //     if (notesEditMode) {
+  //       saveNote(currentHex);
+  //     } else {
+  //       notesEditMode = true;
+  //       renderNotesSection(currentHex);
+  //     }
+  //     return;
+  //   }
+  //   // Enter opens/refreshes sidebar for current hex (not when in search or notes)
+  //   if (
+  //     !inSearch &&
+  //     !inNotes &&
+  //     !hasModifier &&
+  //     key === "Enter" &&
+  //     currentHex
+  //   ) {
+  //     openSidebar(currentHex);
+  //     return;
+  //   }
+  //   if (
+  //     (key === "=" || key === "+" || key === "-" || key === "0") &&
+  //     !inSearch &&
+  //     !inNotes &&
+  //     !hasModifier &&
+  //     getLabelSize
+  //   ) {
+  //     e.preventDefault();
+  //     if (key === "0") {
+  //       setLabelSize!(DEFAULT_LABEL_SIZE);
+  //       trackEvent("Label size changed", { action: "reset" });
+  //     } else {
+  //       const delta = key === "=" || key === "+" ? 4 : -4;
+  //       setLabelSize!(getLabelSize!() + delta);
+  //       trackEvent("Label size changed", {
+  //         action: delta > 0 ? "increase" : "decrease",
+  //       });
+  //     }
+  //     return;
+  //   }
+  //   if (key === "Escape") {
+  //     if (isSearchDropdownOpen()) {
+  //       closeSearchDropdown();
+  //     } else if (sidebar.classList.contains("open")) {
+  //       closeSidebar();
+  //     } else {
+  //       clearSearch();
+  //     }
+  //   }
+  // }
+  // document.addEventListener("keydown", handleKeydown);
 
-  function clearSearch() {
-    const input = document.getElementById("hex-search") as HTMLInputElement;
-    if (input.value) {
-      input.value = "";
-      input.dispatchEvent(new Event("input"));
-    }
-    closeSearchDropdown();
-    clearHexHighlights();
-    input.blur();
-  }
+  // function clearSearch() {
+  //   const input = document.getElementById("hex-search") as HTMLInputElement;
+  //   if (input.value) {
+  //     input.value = "";
+  //     input.dispatchEvent(new Event("input"));
+  //   }
+  //   closeSearchDropdown();
+  //   clearHexHighlights();
+  //   input.blur();
+  // }
 
   function closeSidebar() {
     sidebar.classList.remove("open");
@@ -2847,41 +3070,58 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     g.setAttribute("data-note-badge", hexId);
     g.setAttribute("pointer-events", "none");
 
-    const circle = svgDocRef.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "circle",
-    );
-    circle.setAttribute("cx", String(topRight.x));
-    circle.setAttribute("cy", String(topRight.y));
-    circle.setAttribute("r", "22");
-    circle.setAttribute("fill", "#4a7c59");
-    circle.setAttribute("stroke", "#fff");
-    circle.setAttribute("stroke-width", "2");
+    // const circle = svgDocRef.createElementNS(
+    //   "http://www.w3.org/2000/svg",
+    //   "circle",
+    // );
+    // circle.setAttribute("cx", String(topRight.x));
+    // circle.setAttribute("cy", String(topRight.y));
+    // circle.setAttribute("r", "22");
+    // circle.setAttribute(
+    //   "fill",
+    //   NOTE_CATEGORY_COLORS[hexNotes[hexId].category],
+    // );
+    // circle.setAttribute("stroke", "#fff");
+    // circle.setAttribute("stroke-width", "2");
 
-    // Pencil icon (simplified path)
-    const icon = svgDocRef.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "text",
-    );
-    icon.setAttribute("x", String(topRight.x));
-    icon.setAttribute("y", String(topRight.y));
-    icon.setAttribute("text-anchor", "middle");
-    icon.setAttribute("dominant-baseline", "central");
-    icon.setAttribute("fill", "#fff");
-    icon.setAttribute("font-size", "22");
-    icon.textContent = "\u270E"; // pencil character
+    // // Pencil icon (simplified path)
+    // const icon = svgDocRef.createElementNS(
+    //   "http://www.w3.org/2000/svg",
+    //   "text",
+    // );
+    // icon.setAttribute("x", String(topRight.x));
+    // icon.setAttribute("y", String(topRight.y));
+    // icon.setAttribute("text-anchor", "middle");
+    // icon.setAttribute("dominant-baseline", "central");
+    // icon.setAttribute("fill", "#fff");
+    // icon.setAttribute("font-size", "22");
+    // icon.textContent = "\u270E"; // pencil character
 
-    g.appendChild(circle);
-    g.appendChild(icon);
+    // g.appendChild(circle);
+    // g.appendChild(icon);
     overlayRef.appendChild(g);
   }
 
   function renderNotesSection(hexId: string) {
     if (notesEditMode) {
-      const existing = hexNotes[hexId] || "";
+      const existingTitle = hexNotes[hexId]?.title || "";
+      const existing = hexNotes[hexId]?.content || "";
+      const category = hexNotes[hexId]?.category || "news";
       sidebarNotes.innerHTML = `
         <div class="notes-section">
           <div class="notes-header"><h3>Referee Notes</h3></div>
+          <label class="notes-title-label" for="notes-title">Title</label>
+          <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${existingTitle.replace(/"/g, "&quot;")}" placeholder="Note title" />
+          <label class="notes-category-label" for="notes-category">Category</label>
+          <select class="notes-category" id="notes-category">
+            <option value="explored">ESPLORATO</option>
+            <option value="news">NOTIZIE</option>
+            <option value="useful_places">LUOGHI UTILI</option>
+          </select>
+          <div class="notes-color-row">
+            <span>Hex Color</span>
+            <span class="notes-color-swatch" aria-hidden="true"></span>
+          </div>
           <textarea class="notes-textarea" placeholder="Write your notes here...">${existing.replace(/</g, "&lt;")}</textarea>
           <div class="notes-hint">Markdown supported</div>
           <div class="notes-actions">
@@ -2892,6 +3132,19 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       const textarea = sidebarNotes.querySelector(
         ".notes-textarea",
       ) as HTMLTextAreaElement;
+      const categorySelect = sidebarNotes.querySelector(
+        ".notes-category",
+      ) as HTMLSelectElement;
+      const colorSwatch = sidebarNotes.querySelector(
+        ".notes-color-swatch",
+      ) as HTMLElement;
+      categorySelect.value = category;
+      const updateCategoryColor = () => {
+        colorSwatch.style.backgroundColor =
+          NOTE_CATEGORY_COLORS[categorySelect.value as NoteCategory];
+      };
+      categorySelect.addEventListener("change", updateCategoryColor);
+      updateCategoryColor();
       textarea.focus();
       textarea.addEventListener("keydown", (e: KeyboardEvent) => {
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -2914,9 +3167,13 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         <div class="notes-section">
           <div class="notes-header">
             <h3>Referee Notes</h3>
-            <button class="notes-edit-btn" aria-label="Edit notes" title="Edit notes">&#9998;</button>
+            <div class="notes-buttons">
+              <button class="notes-edit-btn" aria-label="Edit notes" title="Edit notes">&#9998;</button>
+              <button class="notes-delete-btn" aria-label="Delete notes" title="Delete notes">&#128465;</button>
+            </div>
           </div>
-          <div class="notes-view">${renderMarkdown(hexNotes[hexId])}</div>
+          ${hexNotes[hexId].title ? `<div class="notes-title-view">${hexNotes[hexId].title}</div>` : ""}
+          <div class="notes-view">${renderMarkdown(hexNotes[hexId].content)}</div>
         </div>`;
       sidebarNotes
         .querySelector(".notes-edit-btn")!
@@ -2924,6 +3181,13 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           trackEvent("Referee note editing", { hex: hexId });
           notesEditMode = true;
           renderNotesSection(hexId);
+        });
+      sidebarNotes
+        .querySelector(".notes-delete-btn")!
+        .addEventListener("click", async () => {
+          await deleteNote(hexId);
+          renderNotesSection(hexId);
+          updateNoteBadge(hexId);
         });
     } else {
       sidebarNotes.innerHTML = `
@@ -2940,20 +3204,47 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
   }
 
-  function saveNote(hexId: string) {
+  async function saveNote(hexId: string) {
     const textarea = sidebarNotes.querySelector(
       ".notes-textarea",
     ) as HTMLTextAreaElement | null;
+    const titleInput = sidebarNotes.querySelector(
+      ".notes-title",
+    ) as HTMLInputElement | null;
+    const categorySelect = sidebarNotes.querySelector(
+      ".notes-category",
+    ) as HTMLSelectElement | null;
     const text = textarea ? textarea.value.trim() : "";
+    const title = titleInput ? titleInput.value.trim() : "";
+    const category = (categorySelect?.value || "news") as NoteCategory;
     if (text) {
-      hexNotes[hexId] = text;
+      hexNotes[hexId] = { title, content: text, category };
     } else {
       delete hexNotes[hexId];
     }
-    saveNotes();
+    updateNoteTextLabel(hexId);
+    updateNoteFill(hexId);
     notesEditMode = false;
     renderNotesSection(hexId);
     updateNoteBadge(hexId);
+    if (sb) {
+      if (text) {
+        const { error } = await sb.from("hex_notes").upsert({
+          hex_id: hexId,
+          title,
+          content: text,
+          category,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) console.warn("Shared note save failed:", error.message);
+      } else {
+        const { error } = await sb
+          .from("hex_notes")
+          .delete()
+          .eq("hex_id", hexId);
+        if (error) console.warn("Shared note delete failed:", error.message);
+      }
+    }
     trackEvent("Referee note saved", {
       hex: hexId,
       action: text ? "save" : "delete",
@@ -2967,11 +3258,12 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
 
   function openSidebar(hexId: string, { skipTracking = false } = {}) {
     if (!skipTracking) trackEvent("Hex opened", { hex: hexId });
-    sidebarTitle.innerHTML =
-      hexId +
-      (HEX_PAGES[hexId]
-        ? ` <span class="hex-page-ref"><abbr data-tooltip="Dolmenwood Campaign Book">DCB</abbr> p. ${HEX_PAGES[hexId]}</span>`
-        : "");
+    // sidebarTitle.innerHTML =
+    //   hexId +
+    //   (HEX_PAGES[hexId]
+    //     ? ` <span class="hex-page-ref"><abbr data-tooltip="Dolmenwood Campaign Book">DCB</abbr> p. ${HEX_PAGES[hexId]}</span>`
+    //     : "");
+    sidebarTitle.innerHTML = hexId;
     updateSidebarExploration(hexId);
     const poiList = POIS[hexId];
     const mods = MODULES[hexId];
@@ -3286,7 +3578,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       overlay.insertBefore(hexGroup, overlay.firstChild);
 
       // Forward keyboard events from embedded SVG to parent handler
-      svgDoc.addEventListener("keydown", handleKeydown);
+      // svgDoc.addEventListener("keydown", handleKeydown);
 
       // Mute geography/grid but not hex numbers or badges
       // Apply dark-mode inversion only to grid + geography, not labels/badges
@@ -3316,7 +3608,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         if (labels) {
           labels.style.fill = "#000000";
           labelBgs.forEach(({ rect }) => {
-            rect.setAttribute("fill", "rgba(213,227,204,0.75)");
+            rect.setAttribute("fill", "rgba(211,211,211,0.75)");
           });
         }
         poiMarkers.forEach((m) => m.setAttribute("fill", POI_COLOR));
@@ -3372,9 +3664,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           schedulePush();
           updateLabelBgs();
         };
-        getLabelSize = function () {
-          return labelSize;
-        };
+        // getLabelSize = function () {
+        //   return labelSize;
+        // };
       }
 
       // --- POI markers (rendered first so badges appear on top) ---
@@ -3512,19 +3804,23 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       svgDoc.querySelectorAll("[data-hex]").forEach((poly) => {
         const hexId = (poly as HTMLElement).dataset.hex!;
         hexPolys[hexId] = poly as unknown as SVGPolygonElement;
+        let mobileTooltipHex: string | null = null;
 
-        // Apply terrain color from hex color data (or none for uncolored hexes)
-        if (HEX_COLORS[hexId]) {
-          poly.setAttribute("fill", HEX_COLORS[hexId]);
-          poly.setAttribute("fill-opacity", "0.4");
-        } else {
-          poly.setAttribute("fill", "none");
-        }
+        // Use a neutral base; note colors are rendered in a separate overlay.
+        poly.setAttribute("fill", NOTELESS_HEX_COLOR);
+        poly.setAttribute("fill-opacity", "0.4");
 
         const poiList = POIS[hexId];
         const mods = MODULES[hexId];
-        poly.addEventListener("mouseenter", (e) => {
-          let html = "";
+        const showTooltip = (event: Event) => {
+          const note = hexNotes[hexId];
+          if (!note) {
+            tooltip.style.display = "none";
+            tooltip.style.border = "none";
+            return;
+          }
+          const e = event as MouseEvent | PointerEvent;
+          let html = `<div class="tt-hex">${hexId}</div>`;
           const vState = visitedHexes.get(hexId);
           if (vState) {
             const label =
@@ -3554,9 +3850,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
               })
               .join("");
           }
-          if (hexNotes[hexId]) {
-            html += `<div><span class="tt-name" style="color:#7cb88c">Has Referee notes</span></div>`;
-          }
+          tooltip.style.border = `2px solid ${NOTE_CATEGORY_COLORS[note.category]}`;
+          html += `<div><span class="tt-name" style="color:#000">${note.content}</span></div>`;
           if (!html) return;
           tooltip.innerHTML = html;
           tooltip.style.display = "block";
@@ -3564,6 +3859,22 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           const me = e as MouseEvent;
           tooltip.style.left = rect.left + me.clientX + 12 + "px";
           tooltip.style.top = rect.top + me.clientY - 12 + "px";
+        };
+        poly.addEventListener("mouseenter", showTooltip);
+        poly.addEventListener("pointerdown", (e) => {
+          if ((e as PointerEvent).pointerType === "touch") {
+            if (!hexNotes[hexId]) {
+              mobileTooltipHex = hexId;
+              selectHex(hexId);
+              openSidebar(hexId);
+              notesEditMode = true;
+              renderNotesSection(hexId);
+              trackEvent("Referee note started", { hex: hexId });
+              return;
+            }
+            mobileTooltipHex = mobileTooltipHex === hexId ? null : hexId;
+          }
+          showTooltip(e);
         });
         poly.addEventListener("mousemove", (e) => {
           if (tooltip.style.display === "none") return;
@@ -3576,12 +3887,35 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           tooltip.style.display = "none";
         });
 
-        poly.addEventListener("click", () => {
+        poly.addEventListener("click", (e) => {
+          if (mobileTooltipHex === hexId) {
+            e.preventDefault();
+            return;
+          }
+          tooltip.style.display = "none";
           selectHex(hexId);
           openSidebar(hexId);
         });
       });
-      allHexIds = Object.keys(hexPolys).sort();
+      // allHexIds = Object.keys(hexPolys).sort();
+
+      noteLabelGroup = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g",
+      );
+      noteLabelGroup.setAttribute("class", "test-hex-labels");
+      noteLabelGroup.setAttribute("pointer-events", "none");
+      overlay.appendChild(noteLabelGroup);
+
+      Object.keys(hexPolys).forEach(updateNoteTextLabel);
+      noteFillGroup = svgDoc.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "g",
+      );
+      noteFillGroup.setAttribute("class", "note-fills");
+      noteFillGroup.setAttribute("pointer-events", "none");
+      noteLabelGroup.parentNode!.insertBefore(noteFillGroup, noteLabelGroup);
+      Object.keys(hexPolys).forEach(updateNoteFill);
 
       // --- DM Note badges ---
       Object.keys(hexNotes).forEach((hexId) => updateNoteBadge(hexId));
@@ -3621,7 +3955,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         // Highlight hex polygons for numeric queries
         if (isNumeric && q.length > 0) {
           Object.entries(hexPolys).forEach(([hexId, poly]) => {
-            const match = hexId.startsWith(q);
+            const match = numericHexMatches(hexId, q);
             poly.style.fill = match ? SEARCH_HIGHLIGHT : "";
             poly.style.fillOpacity = match ? "1" : "";
           });
@@ -3745,15 +4079,15 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     });
 
   // Track + hide "See all modules" link
-  const seeModules = document.getElementById("see-modules") as HTMLElement;
-  seeModules.addEventListener("click", () => {
-    trackEvent("All modules clicked");
-  });
-  mapContainer.addEventListener(
-    "scroll",
-    () => {
-      seeModules.style.display = mapContainer.scrollTop > 100 ? "none" : "";
-    },
-    { passive: true },
-  );
+  // const seeModules = document.getElementById("see-modules") as HTMLElement;
+  // seeModules.addEventListener("click", () => {
+  //   trackEvent("All modules clicked");
+  // });
+  // mapContainer.addEventListener(
+  //   "scroll",
+  //   () => {
+  //     seeModules.style.display = mapContainer.scrollTop > 100 ? "none" : "";
+  //   },
+  //   { passive: true },
+  // );
 </script>

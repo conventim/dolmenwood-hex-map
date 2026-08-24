@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { buildSearchIndex, searchEntries } from "../../src/lib/map/search";
+import {
+  buildSearchIndex,
+  numericHexMatches,
+  searchEntries,
+} from "../../src/lib/map/search";
 
 const sampleHexColors: Record<string, string> = {
   "0101": "#8B9D83",
@@ -85,6 +89,34 @@ describe("searchEntries", () => {
     expect(results.length).toBeGreaterThan(0);
     const hexResults = results.filter((r) => r.type === "hex");
     expect(hexResults.every((r) => r.hexId?.startsWith("01"))).toBe(true);
+  });
+
+  it("matches short numeric queries as raw and zero-padded prefixes", () => {
+    const index = buildSearchIndex(
+      {
+        "0101": "#000",
+        "1010": "#000",
+        "1011": "#000",
+        "0809": "#000",
+      },
+      {},
+      {},
+      [],
+    );
+
+    expect(searchEntries("809", index).map((entry) => entry.hexId)).toContain(
+      "0809",
+    );
+    expect(searchEntries("101", index).map((entry) => entry.hexId)).toEqual(
+      expect.arrayContaining(["0101", "1010", "1011"]),
+    );
+  });
+
+  it("checks numeric hex prefixes with and without zero padding", () => {
+    expect(numericHexMatches("0809", "809")).toBe(true);
+    expect(numericHexMatches("1010", "101")).toBe(true);
+    expect(numericHexMatches("0101", "101")).toBe(true);
+    expect(numericHexMatches("0201", "101")).toBe(false);
   });
 
   it("scores exact matches highest", () => {

@@ -11,6 +11,12 @@ export interface ScoredEntry extends SearchEntry {
   score: number;
 }
 
+export function numericHexMatches(hexId: string, query: string): boolean {
+  if (!/^\d+$/.test(query)) return false;
+  if (hexId.startsWith(query)) return true;
+  return query.length < 4 && hexId.startsWith(query.padStart(4, "0"));
+}
+
 interface PoiInfo {
   name: string;
   category: string;
@@ -116,12 +122,12 @@ export function searchEntries(
     let score = 0;
     if (isNumeric) {
       // Numeric: prefix-match hex IDs, plus modules/POIs in matching hexes
-      if (entry.type === "hex" && entry.hexId?.startsWith(q)) {
+      if (entry.type === "hex" && entry.hexId && numericHexMatches(entry.hexId, q)) {
         score = 10;
       } else if (
         entry.type !== "hex" &&
         entry.hexId &&
-        entry.hexId.startsWith(q)
+        numericHexMatches(entry.hexId, q)
       ) {
         score = 5;
       }
