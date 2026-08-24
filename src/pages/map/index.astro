@@ -4,7 +4,7 @@ import { modules } from "../../data/dolmenwood-map-modules";
 import { pois } from "../../data/map-pois";
 import { updates } from "../../data/map-updates";
 import { marked } from "marked";
-// import hexColors from "../../data/hex-colors.json";
+import hexColors from "../../data/hex-colors.json";
 import hexPages from "../../data/hex-pages.json";
 import { addAbbrTags, linkifyHexRefs } from "../../lib/map/text-transforms";
 import { CANONICAL_URL, contactEmailWithTag } from "../../lib/config";
@@ -62,7 +62,7 @@ for (const poi of pois) {
 
 const modulesJson = JSON.stringify(hexModules);
 const poisJson = JSON.stringify(hexPois);
-const hexColorsJson = JSON.stringify({});
+const hexColorsJson = JSON.stringify(hexColors);
 const hexPagesJson = JSON.stringify(hexPages);
 const updatesJson = JSON.stringify(updates);
 
@@ -1810,9 +1810,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     numericHexMatches,
     searchEntries,
   } from "../../lib/map/search";
-  import {
-    countProgress,
-  } from "../../lib/map/hex-nav";
+  import { countProgress } from "../../lib/map/hex-nav";
   import {
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY,
@@ -1956,7 +1954,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   // Named color constants
   const ACCENT_GREEN = "#2d6a4f";
   const HOVER_FILL = "rgba(45,106,79,0.25)";
-  const SEARCH_HIGHLIGHT = "rgba(45,106,79,0.4)";
+  const SEARCH_HIGHLIGHT = "rgba(255,183,77,0.55)";
+  const SEARCH_HIGHLIGHT_STROKE = "#ff8f00";
+  const SEARCH_HIGHLIGHT_STROKE_WIDTH = "12";
   const MODULE_BADGE_COLOR = "#a0522d";
   const NOTELESS_HEX_COLOR = "#d3d3d3";
   const NOTE_CATEGORY_COLORS = {
@@ -2314,10 +2314,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   // --- Shared DM notes ---
   async function deleteNote(hexId: string) {
     if (sb) {
-      const { error } = await sb
-        .from("hex_notes")
-        .delete()
-        .eq("hex_id", hexId);
+      const { error } = await sb.from("hex_notes").delete().eq("hex_id", hexId);
       if (error) {
         console.warn("Shared note delete failed:", error.message);
         return;
@@ -2422,9 +2419,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     category: NoteCategory = "news",
     title: string | null = "",
   ) {
-    const safeCategory = NOTE_CATEGORY_COLORS[category]
-      ? category
-      : "news";
+    const safeCategory = NOTE_CATEGORY_COLORS[category] ? category : "news";
     if (content)
       hexNotes[hexId] = {
         title: title ?? "",
@@ -2454,13 +2449,13 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       applySharedNote(note.hex_id, note.content, note.category, note.title);
     }
 
-    sb
-      .channel("shared-hex-notes")
+    sb.channel("shared-hex-notes")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "hex_notes" },
         (payload: any) => {
-          const note = payload.eventType === "DELETE" ? payload.old : payload.new;
+          const note =
+            payload.eventType === "DELETE" ? payload.old : payload.new;
           if (note?.hex_id) {
             applySharedNote(
               note.hex_id,
@@ -2764,6 +2759,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     Object.values(hexPolys).forEach((poly) => {
       poly.style.fill = "";
       poly.style.fillOpacity = "";
+      poly.style.stroke = "";
+      poly.style.strokeWidth = "";
     });
   }
 
@@ -3903,10 +3900,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       overlay.appendChild(noteLabelGroup);
 
       Object.keys(hexPolys).forEach(updateNoteTextLabel);
-      noteFillGroup = svgDoc.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "g",
-      );
+      noteFillGroup = svgDoc.createElementNS("http://www.w3.org/2000/svg", "g");
       noteFillGroup.setAttribute("class", "note-fills");
       noteFillGroup.setAttribute("pointer-events", "none");
       noteLabelGroup.parentNode!.insertBefore(noteFillGroup, noteLabelGroup);
@@ -3951,8 +3945,12 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         if (isNumeric && q.length > 0) {
           Object.entries(hexPolys).forEach(([hexId, poly]) => {
             const match = numericHexMatches(hexId, q);
-            poly.style.fill = match ? SEARCH_HIGHLIGHT : "";
-            poly.style.fillOpacity = match ? "1" : "";
+            const hasNote = Boolean(hexNotes[hexId]);
+            poly.style.fill = match && !hasNote ? SEARCH_HIGHLIGHT : "";
+            poly.style.fillOpacity = match && !hasNote ? "1" : "";
+            poly.style.stroke = match && hasNote ? SEARCH_HIGHLIGHT_STROKE : "";
+            poly.style.strokeWidth =
+              match && hasNote ? SEARCH_HIGHLIGHT_STROKE_WIDTH : "";
           });
         } else {
           clearHexHighlights();
