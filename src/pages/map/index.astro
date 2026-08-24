@@ -682,6 +682,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       width: 240px;
       padding: 8px 12px;
       padding-left: 12px;
+      padding-right: 34px;
       background: var(--toggle-bg);
       color: var(--toggle-text);
       border: none;
@@ -693,6 +694,33 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
       outline: none;
       box-sizing: border-box;
+    }
+
+    #search-clear {
+      position: absolute;
+      top: 50%;
+      right: 6px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      transform: translateY(-50%);
+      background: rgb(0 0 0 / 14%);
+      color: var(--toggle-text);
+      border: none;
+      border-radius: 50%;
+      font:
+        16px/1 system-ui,
+        sans-serif;
+      cursor: pointer;
+    }
+
+    #search-clear:hover,
+    #search-clear:focus-visible {
+      background: rgb(0 0 0 / 24%);
+    }
+
+    #search-clear[hidden] {
+      display: none;
     }
 
     #hex-search[aria-expanded="true"] {
@@ -757,9 +785,25 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
 
     #search-results .sr-label {
+      display: block;
       flex: 1;
       min-width: 0;
       overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #search-results .sr-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    #search-results .sr-match {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      color: var(--sidebar-levels);
+      font-size: 11px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -777,6 +821,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         sans-serif;
       color: var(--sidebar-levels);
       text-decoration: none;
+      display: block;
       white-space: nowrap;
     }
 
@@ -1560,6 +1605,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         aria-controls="search-results"
         aria-label="Search hexes, modules, and places"
       />
+      <button id="search-clear" type="button" aria-label="Clear search" hidden>
+        x
+      </button>
       <ul id="search-results" role="listbox"></ul>
     </div>
     <!-- <a id="see-modules" href="#adventure-list">↳ All modules</a> -->
@@ -2764,6 +2812,114 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     });
   }
 
+  function updateSearchClearButton() {
+    const clearButton = document.getElementById(
+      "search-clear",
+    ) as HTMLButtonElement | null;
+    const input = document.getElementById(
+      "hex-search",
+    ) as HTMLInputElement | null;
+    if (!clearButton || !input) return;
+    clearButton.hidden = input.value.length === 0;
+  }
+
+  function escapeHtml(value: string) {
+    return value.replace(
+      /[&<>"]/g,
+      (char) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+        })[char]!,
+    );
+  }
+
+  function normalizeSearchText(value: string) {
+    return value.replace(/\s+/g, " ").trim();
+  }
+
+  function noteContentSnippet(content: string, query: string) {
+    const normalized = normalizeSearchText(content);
+    const matchIndex = normalized.toLowerCase().indexOf(query.toLowerCase());
+    if (matchIndex < 0) return normalized.slice(0, 120);
+
+    const ranges = Array.from(normalized.matchAll(/\S+/g), (match) => ({
+      text: match[0],
+      start: match.index ?? 0,
+      end: (match.index ?? 0) + match[0].length,
+    }));
+    const matchWordIndex = ranges.findIndex(
+      (range) => range.start <= matchIndex && range.end >= matchIndex,
+    );
+    if (matchWordIndex < 0) return normalized.slice(0, 120);
+
+    const startIndex = Math.max(0, matchWordIndex - 4);
+    const endIndex = Math.min(ranges.length, matchWordIndex + 5);
+    const snippet = ranges.slice(startIndex, endIndex).map((word) => word.text);
+    return `${startIndex > 0 ? "... " : ""}${snippet.join(" ")}${
+      endIndex < ranges.length ? " ..." : ""
+    }`;
+  }
+
+  function searchNoteEntries(query: string) {
+    const q = query.trim();
+    if (!q) return [];
+
+    const qLower = q.toLowerCase();
+    return Object.entries(hexNotes)
+      .flatMap(([hexId, note]) => {
+        const title = normalizeSearchText(note.title || "");
+        const content = normalizeSearchText(note.content || "");
+        const titleLower = title.toLowerCase();
+        const contentLower = content.toLowerCase();
+        const titleMatches = titleLower.includes(qLower);
+        const contentMatches = contentLower.includes(qLower);
+        if (!titleMatches && !contentMatches) return [];
+
+        const score =
+          titleLower === qLower
+            ? 95
+            : titleLower.startsWith(qLower)
+              ? 85
+              : titleMatches
+                ? 65
+                : 35;
+        const matchSource = titleMatches ? "Title" : "Note";
+        const matchText = titleMatches ? title : noteContentSnippet(content, q);
+
+        return [
+          {
+            hexId,
+            label: title || `Note ${hexId}`,
+            type: "note",
+            typeBadge: "Note",
+            searchText: `${title} ${content} ${hexId}`.toLowerCase(),
+            score,
+            matchText,
+            matchSource,
+          },
+        ];
+      })
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.label.localeCompare(b.label);
+      });
+  }
+
+  function searchMapEntries(query: string) {
+    const results = [
+      ...searchEntries(query, SEARCH_INDEX),
+      ...searchNoteEntries(query),
+    ];
+    results.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.label.localeCompare(b.label);
+    });
+    return results.slice(0, 12);
+  }
+
   function renderSearchResults(results: any[]) {
     const searchResultsList = document.getElementById(
       "search-results",
@@ -2783,11 +2939,20 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       li.dataset.index = String(i);
       const hexDisplay =
         entry.type === "location-module" ? entry.location : entry.hexId;
+      const matchDisplay = entry.matchText
+        ? `<span class="sr-match">${escapeHtml(
+            entry.matchSource
+              ? `${entry.matchSource}: ${entry.matchText}`
+              : entry.matchText,
+          )}</span>`
+        : "";
       li.innerHTML =
-        `<span class="sr-badge">${entry.typeBadge}</span>` +
-        `<span class="sr-label">${entry.label}</span>` +
+        `<span class="sr-badge">${escapeHtml(entry.typeBadge)}</span>` +
+        `<span class="sr-main"><span class="sr-label">${escapeHtml(
+          entry.label,
+        )}</span>${matchDisplay}</span>` +
         (entry.type !== "hex"
-          ? `<span class="sr-hex">${hexDisplay}</span>`
+          ? `<span class="sr-hex">${escapeHtml(hexDisplay || "")}</span>`
           : "");
       li.addEventListener("click", () => selectSearchResult(entry));
       searchResultsList.appendChild(li);
@@ -3916,6 +4081,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       const hexSearch = document.getElementById(
         "hex-search",
       ) as HTMLInputElement;
+      const searchClear = document.getElementById(
+        "search-clear",
+      ) as HTMLButtonElement;
 
       const PLACEHOLDER_FULL = hexSearch.placeholder;
       const PLACEHOLDER_SHORT = "\u{1F50D} Search\u2026";
@@ -3925,10 +4093,18 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       }
       updateSearchPlaceholder();
       window.addEventListener("resize", updateSearchPlaceholder);
+      updateSearchClearButton();
+
+      searchClear.addEventListener("click", () => {
+        hexSearch.value = "";
+        hexSearch.dispatchEvent(new Event("input"));
+        hexSearch.focus();
+      });
 
       hexSearch.addEventListener("input", () => {
         const q = hexSearch.value;
         const isNumeric = /^\d+$/.test(q);
+        updateSearchClearButton();
 
         // Clear nav cursor when searching
         if (currentHex && hexPolys[currentHex]) {
@@ -3957,7 +4133,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         }
 
         // Search and render dropdown
-        const results = searchEntries(q, SEARCH_INDEX);
+        const results = searchMapEntries(q);
         renderSearchResults(results);
       });
 

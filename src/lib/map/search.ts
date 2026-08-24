@@ -1,10 +1,12 @@
 export interface SearchEntry {
   hexId: string | null;
   label: string;
-  type: "hex" | "poi" | "module" | "location-module";
+  type: "hex" | "poi" | "module" | "location-module" | "note";
   typeBadge: string;
   searchText: string;
   location?: string;
+  matchText?: string;
+  matchSource?: string;
 }
 
 export interface ScoredEntry extends SearchEntry {
@@ -122,7 +124,11 @@ export function searchEntries(
     let score = 0;
     if (isNumeric) {
       // Numeric: prefix-match hex IDs, plus modules/POIs in matching hexes
-      if (entry.type === "hex" && entry.hexId && numericHexMatches(entry.hexId, q)) {
+      if (
+        entry.type === "hex" &&
+        entry.hexId &&
+        numericHexMatches(entry.hexId, q)
+      ) {
         score = 10;
       } else if (
         entry.type !== "hex" &&
