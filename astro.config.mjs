@@ -27,6 +27,9 @@ function publicDirIndex() {
 // https://astro.build/config
 export default defineConfig({
   outDir: "./dist",
+  // Set to e.g. "/dolmenwood-hex-map" only when deploying standalone to a
+  // GitHub Pages *project* site; leave unset for the submodule build.
+  base: process.env.PUBLIC_BASE_PATH || "/",
   vite: {
     plugins: [publicDirIndex()],
   },
