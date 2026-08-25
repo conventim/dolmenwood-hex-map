@@ -3040,7 +3040,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     const isNumeric = /^\d+$/.test(query.trim());
     const results = [
       ...searchEntries(query, SEARCH_INDEX),
-      ...searchNoteEntries(query),
+      ...(isNumeric ? [] : searchNoteEntries(query)),
     ].map((entry) => {
       if (!isNumeric || entry.type !== "hex" || !entry.hexId) return entry;
       const title = normalizeSearchText(hexNotes[entry.hexId]?.title || "");
