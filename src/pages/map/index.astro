@@ -892,6 +892,45 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       color: var(--sidebar-close-hover);
     }
 
+    #delete-note-box {
+      min-width: 280px;
+      text-align: center;
+    }
+
+    #delete-note-box h3 {
+      margin: 0 0 8px;
+      color: var(--sidebar-heading);
+    }
+
+    #delete-note-box p {
+      margin: 0 0 20px;
+    }
+
+    .delete-note-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .delete-note-actions button {
+      padding: 8px 18px;
+      border: 1px solid var(--sidebar-border);
+      border-radius: 6px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      cursor: pointer;
+    }
+
+    .delete-note-actions button:hover {
+      background: var(--toggle-hover);
+    }
+
+    .delete-note-actions #delete-note-confirm {
+      border-color: #a0522d;
+      background: #a0522d;
+      color: #fff;
+    }
+
     /* Help modal */
     #help-box {
       min-width: 260px;
@@ -1644,6 +1683,22 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       >
     </div>
   </div>
+  <div id="delete-note-overlay" class="modal-overlay" style="display:none">
+    <div
+      id="delete-note-box"
+      class="modal-box"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-note-title"
+    >
+      <h3 id="delete-note-title">Delete note?</h3>
+      <p>This action cannot be undone.</p>
+      <div class="delete-note-actions">
+        <button id="delete-note-cancel" type="button">No</button>
+        <button id="delete-note-confirm" type="button">Yes, delete</button>
+      </div>
+    </div>
+  </div>
   <!-- <button
     id="updates-bell"
     aria-label="Updates"
@@ -2100,6 +2155,35 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   document.getElementById("help-close")!.addEventListener("click", toggleHelp);
   helpOverlay.addEventListener("click", (e) => {
     if (e.target === helpOverlay) toggleHelp();
+  });
+
+  const deleteNoteOverlay = document.getElementById(
+    "delete-note-overlay",
+  ) as HTMLElement;
+  let pendingDeleteHex: string | null = null;
+  function openDeleteNoteConfirmation(hexId: string) {
+    pendingDeleteHex = hexId;
+    deleteNoteOverlay.style.display = "flex";
+  }
+  function closeDeleteNoteConfirmation() {
+    pendingDeleteHex = null;
+    deleteNoteOverlay.style.display = "none";
+  }
+  document
+    .getElementById("delete-note-cancel")!
+    .addEventListener("click", closeDeleteNoteConfirmation);
+  document
+    .getElementById("delete-note-confirm")!
+    .addEventListener("click", async () => {
+      if (!pendingDeleteHex) return;
+      const hexId = pendingDeleteHex;
+      closeDeleteNoteConfirmation();
+      await deleteNote(hexId);
+      renderNotesSection(hexId);
+      updateNoteBadge(hexId);
+    });
+  deleteNoteOverlay.addEventListener("click", (e) => {
+    if (e.target === deleteNoteOverlay) closeDeleteNoteConfirmation();
   });
 
   // --- Store preference ---
@@ -3385,11 +3469,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         });
       sidebarNotes
         .querySelector(".notes-delete-btn")!
-        .addEventListener("click", async () => {
-          await deleteNote(hexId);
-          renderNotesSection(hexId);
-          updateNoteBadge(hexId);
-        });
+        .addEventListener("click", () => openDeleteNoteConfirmation(hexId));
     } else {
       sidebarNotes.innerHTML = `
         <div class="notes-section">
