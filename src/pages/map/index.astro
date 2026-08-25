@@ -1946,6 +1946,36 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
 
   // --- Pinch-to-zoom on mobile ---
   let lastPinchDist = 0;
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchGestureMoved = false;
+  let touchGestureResetTimer: ReturnType<typeof setTimeout> | null = null;
+
+  mapContainer.addEventListener("pointerdown", (e) => {
+    if (e.pointerType !== "touch") return;
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
+    touchGestureMoved = false;
+    if (touchGestureResetTimer) clearTimeout(touchGestureResetTimer);
+  });
+
+  mapContainer.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "touch" || touchGestureMoved) return;
+    touchGestureMoved =
+      Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY) > 8;
+  });
+
+  mapContainer.addEventListener("pointerup", (e) => {
+    if (e.pointerType !== "touch") return;
+    touchGestureResetTimer = setTimeout(() => {
+      touchGestureMoved = false;
+      touchGestureResetTimer = null;
+    }, 300);
+  });
+
+  mapContainer.addEventListener("pointercancel", () => {
+    touchGestureMoved = true;
+  });
 
   mapContainer.addEventListener(
     "touchstart",
@@ -4032,8 +4062,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           tooltip.style.top = rect.top + me.clientY - 12 + "px";
         };
         poly.addEventListener("mouseenter", showTooltip);
-        poly.addEventListener("pointerdown", (e) => {
+        poly.addEventListener("pointerup", (e) => {
           if ((e as PointerEvent).pointerType === "touch") {
+            if (touchGestureMoved) return;
             if (!hexNotes[hexId]) {
               mobileTooltipHex = hexId;
               selectHex(hexId);
@@ -4059,6 +4090,10 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         });
 
         poly.addEventListener("click", (e) => {
+          if (touchGestureMoved) {
+            e.preventDefault();
+            return;
+          }
           if (mobileTooltipHex === hexId) {
             e.preventDefault();
             return;
