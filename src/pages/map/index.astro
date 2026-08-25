@@ -751,7 +751,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
 
     #search-results li {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 8px;
       padding: 8px 12px;
       cursor: pointer;
@@ -788,9 +788,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       display: block;
       flex: 1;
       min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
     }
 
     #search-results .sr-main {
@@ -801,11 +799,10 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     #search-results .sr-match {
       display: block;
       margin-top: 2px;
-      overflow: hidden;
       color: var(--sidebar-levels);
       font-size: 11px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
 
     #search-results .sr-hex {
@@ -2423,19 +2420,36 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     text.setAttribute("font-size", "28");
     text.setAttribute("font-family", "system-ui, sans-serif");
     text.setAttribute("fill", "#000000");
-    text.textContent = titleText;
     noteLabelGroup.appendChild(text);
 
-    if (titleText && text.getComputedTextLength() > maxTextWidth) {
-      let visibleText = titleText;
-      do {
-        visibleText = visibleText.slice(0, -1);
-        text.textContent = visibleText + "...";
-      } while (
-        visibleText.length > 0 &&
-        text.getComputedTextLength() > maxTextWidth
-      );
+    const words = titleText.trim().split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let currentLine = "";
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      text.textContent = candidate;
+      if (currentLine && text.getComputedTextLength() > maxTextWidth) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = candidate;
+      }
     }
+    if (currentLine) lines.push(currentLine);
+
+    text.textContent = "";
+    const lineHeight = 32;
+    const firstLineY = centerY - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, index) => {
+      const tspan = svgDocRef!.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "tspan",
+      );
+      tspan.setAttribute("x", String(centerX));
+      tspan.setAttribute("y", String(firstLineY + index * lineHeight));
+      tspan.textContent = line;
+      text.appendChild(tspan);
+    });
 
     noteLabels[hexId] = text;
   }
