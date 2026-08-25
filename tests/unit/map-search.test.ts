@@ -117,6 +117,7 @@ describe("searchEntries", () => {
     expect(numericHexMatches("1010", "101")).toBe(true);
     expect(numericHexMatches("0101", "101")).toBe(true);
     expect(numericHexMatches("0201", "101")).toBe(false);
+    expect(numericHexMatches("0901", "9")).toBe(true);
   });
 
   it("scores exact matches highest", () => {
@@ -137,7 +138,7 @@ describe("searchEntries", () => {
     expect(results[0].score).toBe(30);
   });
 
-  it("caps results at 12", () => {
+  it("caps results at 10", () => {
     // Build an index with many entries
     const bigHexColors: Record<string, string> = {};
     for (let i = 0; i < 50; i++) {
@@ -145,6 +146,6 @@ describe("searchEntries", () => {
     }
     const bigIndex = buildSearchIndex(bigHexColors, {}, {}, []);
     const results = searchEntries("01", bigIndex);
-    expect(results.length).toBeLessThanOrEqual(12);
+    expect(results.length).toBeLessThanOrEqual(10);
   });
 });

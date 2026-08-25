@@ -16,7 +16,14 @@ export interface ScoredEntry extends SearchEntry {
 export function numericHexMatches(hexId: string, query: string): boolean {
   if (!/^\d+$/.test(query)) return false;
   if (hexId.startsWith(query)) return true;
-  return query.length < 4 && hexId.startsWith(query.padStart(4, "0"));
+  if (query.length < 4 && hexId.startsWith(query.padStart(4, "0"))) {
+    return true;
+  }
+  const normalizedHexId = hexId.replace(/^0+/, "");
+  const normalizedQuery = query.replace(/^0+/, "");
+  return (
+    normalizedQuery.length > 0 && normalizedHexId.startsWith(normalizedQuery)
+  );
 }
 
 interface PoiInfo {
@@ -160,5 +167,5 @@ export function searchEntries(
     return a.label.localeCompare(b.label);
   });
 
-  return scored.slice(0, 12);
+  return scored.slice(0, 10);
 }
