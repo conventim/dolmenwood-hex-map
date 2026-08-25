@@ -3037,10 +3037,17 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   }
 
   function searchMapEntries(query: string) {
+    const isNumeric = /^\d+$/.test(query.trim());
     const results = [
       ...searchEntries(query, SEARCH_INDEX),
       ...searchNoteEntries(query),
-    ];
+    ].map((entry) => {
+      if (!isNumeric || entry.type !== "hex" || !entry.hexId) return entry;
+      const title = normalizeSearchText(hexNotes[entry.hexId]?.title || "");
+      return title
+        ? { ...entry, matchText: title, matchSource: "Title" }
+        : entry;
+    });
     results.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       return a.label.localeCompare(b.label);
