@@ -3402,8 +3402,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       sidebarNotes.innerHTML = `
         <div class="notes-section">
           <div class="notes-header"><h3>Referee Notes</h3></div>
-          <label class="notes-title-label" for="notes-title">Title</label>
-          <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${existingTitle.replace(/"/g, "&quot;")}" placeholder="Note title" />
+          <label class="notes-title-label" for="notes-title">Title *</label>
+          <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${existingTitle.replace(/"/g, "&quot;")}" placeholder="Note title" required />
           <label class="notes-category-label" for="notes-category">Category</label>
           <select class="notes-category" id="notes-category">
             <option value="explored">ESPLORATO</option>
@@ -3414,7 +3414,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
             <span>Hex Color</span>
             <span class="notes-color-swatch" aria-hidden="true"></span>
           </div>
-          <textarea class="notes-textarea" placeholder="Write your notes here...">${existing.replace(/</g, "&lt;")}</textarea>
+          <label class="notes-title-label" for="notes-text">Text *</label>
+          <textarea class="notes-textarea" id="notes-text" placeholder="Write your notes here..." required>${existing.replace(/</g, "&lt;")}</textarea>
           <div class="notes-hint">Markdown supported</div>
           <div class="notes-actions">
             <button data-action="save">Save</button>
@@ -3505,11 +3506,16 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     const text = textarea ? textarea.value.trim() : "";
     const title = titleInput ? titleInput.value.trim() : "";
     const category = (categorySelect?.value || "news") as NoteCategory;
-    if (text) {
-      hexNotes[hexId] = { title, content: text, category };
-    } else {
-      delete hexNotes[hexId];
+    if (!title || !text) {
+      const firstInvalidField = !title ? titleInput : textarea;
+      firstInvalidField?.setCustomValidity(
+        !title ? "Title is required." : "Text is required.",
+      );
+      firstInvalidField?.reportValidity();
+      firstInvalidField?.setCustomValidity("");
+      return;
     }
+    hexNotes[hexId] = { title, content: text, category };
     updateNoteTextLabel(hexId);
     updateNoteFill(hexId);
     notesEditMode = false;
