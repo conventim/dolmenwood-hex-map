@@ -342,19 +342,20 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     /* DM Notes */
     .notes-section {
       border-bottom: 1px solid var(--sidebar-border);
-      padding: 12px 16px;
+      padding: 16px 32px 20px;
     }
 
     .notes-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
 
     .notes-header h3 {
       margin: 0;
-      font-size: 14px;
+      font-size: 16px;
+      line-height: 1.2;
       color: var(--sidebar-heading);
       font-weight: 600;
     }
@@ -374,17 +375,38 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
 
     .notes-view {
-      font-size: 14px;
-      line-height: 1.5;
+      font-size: 15px;
+      line-height: 1.55;
       color: var(--sidebar-desc);
       overflow-wrap: break-word;
     }
 
     .notes-title-view {
       color: var(--sidebar-heading);
-      font-size: 15px;
+      font-size: 19px;
+      line-height: 1.25;
       font-weight: 600;
+      margin: 0 0 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .notes-category-view {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--sidebar-levels);
+      font-size: 14px;
+      line-height: 1.3;
       margin-bottom: 6px;
+    }
+
+    .notes-category-swatch {
+      width: 12px;
+      height: 12px;
+      flex: 0 0 12px;
+      border: 1px solid rgb(0 0 0 / 25%);
+      border-radius: 2px;
+      box-sizing: border-box;
     }
 
     .notes-view h1,
@@ -2094,6 +2116,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     news: "#ffd000",
     useful_places: "#2b6cb0",
   } as const;
+  const NOTE_CATEGORY_LABELS = {
+    explored: "Esplorato",
+    news: "Notizie",
+    useful_places: "Luoghi utili",
+  } as const;
   type NoteCategory = keyof typeof NOTE_CATEGORY_COLORS;
   interface SharedNote {
     title: string;
@@ -3406,9 +3433,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${existingTitle.replace(/"/g, "&quot;")}" placeholder="Note title" required />
           <label class="notes-category-label" for="notes-category">Category</label>
           <select class="notes-category" id="notes-category">
-            <option value="explored">ESPLORATO</option>
-            <option value="news">NOTIZIE</option>
-            <option value="useful_places">LUOGHI UTILI</option>
+            <option value="explored">Esplorato</option>
+            <option value="news">Notizie</option>
+            <option value="useful_places">Luoghi utili</option>
           </select>
           <div class="notes-color-row">
             <span>Hex Color</span>
@@ -3465,7 +3492,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
               <button class="notes-delete-btn" aria-label="Delete notes" title="Delete notes">&#128465;</button>
             </div>
           </div>
-          ${hexNotes[hexId].title ? `<div class="notes-title-view">${hexNotes[hexId].title}</div>` : ""}
+          <div class="notes-category-view">
+            <span class="notes-category-swatch" style="background-color: ${NOTE_CATEGORY_COLORS[hexNotes[hexId].category]}" aria-hidden="true"></span>
+            <span>${NOTE_CATEGORY_LABELS[hexNotes[hexId].category]}</span>
+          </div>
+          <div class="notes-title-view">${hexNotes[hexId].title}</div>
           <div class="notes-view">${renderMarkdown(hexNotes[hexId].content)}</div>
         </div>`;
       sidebarNotes
