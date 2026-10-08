@@ -6,8 +6,6 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "api:dev": "wrangler dev --config cloudflare/wrangler.jsonc",
-    "api:deploy": "wrangler deploy --config cloudflare/wrangler.jsonc",
     "astro": "astro",
     "test": "vitest run"
   },

@@ -93,9 +93,10 @@ const privacyEmail = contactEmailWithTag("privacy");
 
     <h2>Where data is stored</h2>
     <p>
-      Shared referee notes are stored in Cloudflare D1 and are public.
-      Exploration progress and preferences remain on your device. The map no
-      longer uses Supabase authentication or stores private user data remotely.
+      Shared referee notes are stored in a Supabase-hosted PostgreSQL database
+      and are public. Exploration progress and preferences remain on your
+      device. The map does not use authentication or store private user data
+      remotely.
     </p>
 
     <h2>Data deletion</h2>

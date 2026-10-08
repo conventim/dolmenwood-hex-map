@@ -1758,12 +1758,17 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     searchEntries,
   } from "../../lib/map/search";
   import { countProgress } from "../../lib/map/hex-nav";
-  import { D1_API_URL, D1_ENABLED } from "../../lib/config";
+  import {
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    SUPABASE_ENABLED,
+  } from "../../lib/config";
 
   declare global {
     interface Window {
       __MAP_DATA__: any;
       stonks?: { event: (name: string, props?: Record<string, any>) => void };
+      supabase?: any;
     }
   }
 
@@ -1780,18 +1785,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     if (window.stonks) window.stonks.event(name, props);
   }
 
-  async function d1Request(path: string, method = "GET", data?: unknown) {
-    const headers: Record<string, string> = {};
-    if (data !== undefined) headers["Content-Type"] = "application/json";
-    const response = await fetch(`${D1_API_URL}${path}`, {
-      method,
-      headers,
-      body: data === undefined ? undefined : JSON.stringify(data),
-    });
-    if (!response.ok)
-      throw new Error(`Map API request failed (${response.status})`);
-    return response.json();
-  }
+  let sb: any = null;
 
   const DEFAULT_LABEL_SIZE = 54;
   const SVG_ASPECT = 4535 / 3396; // from map.svg viewBox
@@ -2219,7 +2213,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     notesRevision++;
     notesWrites++;
     try {
-      if (D1_ENABLED) await d1Request(`/notes/${hexId}`, "DELETE");
+      if (SUPABASE_ENABLED) {
+        if (!sb) throw new Error("Supabase is not ready");
+        const { error } = await sb.from("hex_notes").delete().eq("hex_id", hexId);
+        if (error) throw error;
+      }
       applySharedNote(hexId, null);
     } catch (error) {
       console.warn("Shared note delete failed:", error);
@@ -2365,19 +2363,21 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   }
 
   async function initSharedNotes() {
-    if (!D1_ENABLED || notesLoading || notesWrites) return;
+    if (!sb || notesLoading || notesWrites) return;
     notesLoading = true;
     const revision = notesRevision;
     try {
-      const data = (await d1Request("/notes")) as (SharedNote & {
-        hex_id: string;
-      })[];
+      const { data, error } = await sb
+        .from("hex_notes")
+        .select("hex_id, title, content, category");
+      if (error) throw error;
+      const notes = (data ?? []) as (SharedNote & { hex_id: string })[];
       if (revision !== notesRevision) return;
-      const ids = new Set(data.map((note) => note.hex_id));
+      const ids = new Set(notes.map((note) => note.hex_id));
       for (const hexId of Object.keys(hexNotes)) {
         if (!ids.has(hexId)) applySharedNote(hexId, null);
       }
-      for (const note of data) {
+      for (const note of notes) {
         const previous = hexNotes[note.hex_id];
         if (
           previous?.title !== note.title ||
@@ -2394,14 +2394,32 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
   }
 
-  if (D1_ENABLED) {
-    void initSharedNotes();
-    setInterval(() => {
-      if (!document.hidden) void initSharedNotes();
-    }, 15000);
-    document.addEventListener("visibilitychange", () => {
-      if (!document.hidden) void initSharedNotes();
-    });
+  if (SUPABASE_ENABLED) {
+    const script = document.createElement("script");
+    script.src =
+      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+    script.onload = () => {
+      if (!window.supabase) return;
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
+      sb.channel("shared-hex-notes")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "hex_notes" },
+          () => void initSharedNotes(),
+        )
+        .subscribe((status: string) => {
+          if (status === "SUBSCRIBED") void initSharedNotes();
+        });
+      void initSharedNotes();
+    };
+    script.onerror = () => console.warn("Supabase library failed to load");
+    document.head.appendChild(script);
   }
 
   function updateProgress() {
@@ -3141,12 +3159,16 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     notesRevision++;
     notesWrites++;
     try {
-      if (D1_ENABLED) {
-        await d1Request(`/notes/${hexId}`, "PUT", {
+      if (SUPABASE_ENABLED) {
+        if (!sb) throw new Error("Supabase is not ready");
+        const { error } = await sb.from("hex_notes").upsert({
+          hex_id: hexId,
           title,
           content: text,
           category,
+          updated_at: new Date().toISOString(),
         });
+        if (error) throw error;
       }
     } catch (error) {
       console.warn("Shared note save failed:", error);

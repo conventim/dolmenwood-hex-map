@@ -5,11 +5,12 @@ export const SITE_URL = import.meta.env.PUBLIC_SITE_URL ?? "";
 export const CANONICAL_URL = import.meta.env.PUBLIC_CANONICAL_URL ?? "";
 export const ANALYTICS_DOMAIN = import.meta.env.PUBLIC_ANALYTICS_DOMAIN ?? "";
 
-export const D1_API_URL = (import.meta.env.PUBLIC_D1_API_URL ?? "").replace(
-  /\/$/,
-  "",
+export const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL ?? "";
+export const SUPABASE_PUBLISHABLE_KEY =
+  import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
+export const SUPABASE_ENABLED = Boolean(
+  SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY,
 );
-export const D1_ENABLED = Boolean(D1_API_URL);
 
 export const CONTACT_EMAIL = import.meta.env.PUBLIC_CONTACT_EMAIL ?? "";
 
