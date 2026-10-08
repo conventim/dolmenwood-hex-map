@@ -1,8 +1,8 @@
-name: Supabase daily query
+name: Supabase hourly query
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 permissions: {}
