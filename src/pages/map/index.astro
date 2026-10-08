@@ -1191,111 +1191,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       display: block;
     }
 
-    /* Auth button */
-    #auth-btn {
-      position: fixed;
-      top: 12px;
-      right: 58px;
-      z-index: 850;
-      background: var(--toggle-bg);
-      color: var(--toggle-text);
-      border: none;
-      border-radius: 50%;
-      width: 38px;
-      height: 38px;
-      font-size: 18px;
-      line-height: 1;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #auth-btn:hover {
-      background: var(--toggle-hover);
-    }
-
-    #auth-btn.signed-in {
-      background: #2d6a4f;
-      color: #fff;
-    }
-
-    #auth-btn.signed-in:hover {
-      background: #245a42;
-    }
-
-    /* Auth modal */
-    #auth-box {
-      max-width: 360px;
-      min-width: 280px;
-    }
-
-    #auth-box h3 {
-      margin: 0 0 16px;
-      color: var(--sidebar-heading);
-      font-size: 16px;
-    }
-
-    .auth-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .auth-buttons button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 10px 16px;
-      border: 1px solid var(--sidebar-border);
-      border-radius: 6px;
-      background: #fff;
-      color: var(--sidebar-text);
-      font-size: 14px;
-      cursor: pointer;
-    }
-
-    .auth-buttons button:hover {
-      background: #f5f0e8;
-    }
-
-    .auth-buttons button svg {
-      flex-shrink: 0;
-    }
-
-    #auth-signed-in {
-      text-align: center;
-    }
-
-    #auth-signed-in .auth-user {
-      font-weight: 600;
-      color: var(--sidebar-heading);
-      margin-bottom: 12px;
-    }
-
-    .sync-status {
-      font-size: 12px;
-      color: var(--sidebar-levels);
-      margin-top: 8px;
-    }
-
-    #auth-signout-btn {
-      margin-top: 12px;
-      padding: 8px 20px;
-      border: 1px solid var(--sidebar-border);
-      border-radius: 6px;
-      background: #fff;
-      color: var(--sidebar-text);
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    #auth-signout-btn:hover {
-      background: #f5f0e8;
-    }
-
     /* Updates modal */
     #updates-box {
       max-width: 480px;
@@ -1740,26 +1635,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     >
     <span id="updates-dot"></span>
   </button> -->
-  <!-- <button
-    id="auth-btn"
-    aria-label="Sign in for cloud sync"
-    data-tooltip="Sign in to sync data across devices"
-  >
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle
-        cx="12"
-        cy="7"
-        r="4"></circle></svg
-    >
-  </button> -->
   <!-- <div id="kbd-hint">
     <span>Press <kbd>?</kbd> for keyboard shortcuts</span>
     <a id="contact-link">About / Add / Correct / Contact</a>
@@ -1803,56 +1678,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         id="config-close"
         class="modal-close"
         aria-label="Close preferences">&times;</button
-      >
-    </div>
-  </div>
-  <div id="auth-overlay" class="modal-overlay" style="display:none">
-    <div id="auth-box" class="modal-box">
-      <div id="auth-signed-out">
-        <h3>Cloud sync (optional)</h3>
-        <p style="font-size:13px;color:var(--sidebar-levels);margin:0 0 16px">
-          Your data is always saved to this browser automatically — no account
-          needed. Sign in only if you want to sync across devices and maintain
-          your data after clearing your browser cache. We will never send you
-          unwanted email.
-        </p>
-        <div class="auth-buttons">
-          <button id="auth-discord-btn">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"
-              ><path
-                d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"
-              ></path></svg
-            >
-            Sign in with Discord
-          </button>
-          <button id="auth-google-btn">
-            <svg width="20" height="20" viewBox="0 0 24 24"
-              ><path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-              ></path><path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              ></path><path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              ></path><path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              ></path></svg
-            >
-            Sign in with Google
-          </button>
-        </div>
-      </div>
-      <div id="auth-signed-in" style="display:none">
-        <h3>Cloud Sync</h3>
-        <div class="auth-user" id="auth-user-name"></div>
-        <div class="sync-status" id="sync-status">Synced</div>
-        <button id="auth-signout-btn">Sign out</button>
-      </div>
-      <button id="auth-close" class="modal-close" aria-label="Close auth"
-        >&times;</button
       >
     </div>
   </div>
@@ -1933,17 +1758,12 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     searchEntries,
   } from "../../lib/map/search";
   import { countProgress } from "../../lib/map/hex-nav";
-  import {
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY,
-    SUPABASE_ENABLED,
-  } from "../../lib/config";
+  import { D1_API_URL, D1_ENABLED } from "../../lib/config";
 
   declare global {
     interface Window {
       __MAP_DATA__: any;
       stonks?: { event: (name: string, props?: Record<string, any>) => void };
-      supabase?: any;
     }
   }
 
@@ -1960,35 +1780,17 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     if (window.stonks) window.stonks.event(name, props);
   }
 
-  // --- Supabase init (deferred) ---
-  // On dolmenwood subdomain, CloudFront prefixes /map, so the consent page is at /oauth/consent.
-  // On the main domain, the full /map/oauth/consent path is needed.
-  const consentPath = window.location.host.startsWith("dolmenwood.")
-    ? "/oauth/consent"
-    : "/map/oauth/consent";
-  let sb: any = null;
-  let isSyncing = false;
-  let pushTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function initSupabase() {
-    if (!window.supabase) return;
-    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-    initSharedNotes();
-    sb.auth.onAuthStateChange((event: any, session: any) => {
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-        if (session?.user) {
-          updateAuthUI(session.user);
-          syncFromCloud(session.user);
-        }
-      } else if (event === "SIGNED_OUT") {
-        updateAuthUI(null);
-      }
+  async function d1Request(path: string, method = "GET", data?: unknown) {
+    const headers: Record<string, string> = {};
+    if (data !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(`${D1_API_URL}${path}`, {
+      method,
+      headers,
+      body: data === undefined ? undefined : JSON.stringify(data),
     });
-    sb.auth.getSession().then(({ data: { session } }: any) => {
-      if (session?.user) {
-        updateAuthUI(session.user);
-      }
-    });
+    if (!response.ok)
+      throw new Error(`Map API request failed (${response.status})`);
+    return response.json();
   }
 
   const DEFAULT_LABEL_SIZE = 54;
@@ -2277,7 +2079,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       trackEvent("Store preference saved", {
         choice: selected.value || "none",
       });
-      schedulePush();
     }
     updateAdventureListLinks();
     if (currentHex && sidebar.classList.contains("open")) {
@@ -2311,87 +2112,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   //  .addEventListener("click", () => {
   //    trackEvent("Contact button clicked");
   //  });
-
-  // --- Auth overlay ---
-  const authOverlay = document.getElementById("auth-overlay") as HTMLElement;
-  const authBtn = document.getElementById("auth-btn") as HTMLElement;
-  const authSignedOut = document.getElementById(
-    "auth-signed-out",
-  ) as HTMLElement;
-  const authSignedIn = document.getElementById("auth-signed-in") as HTMLElement;
-  const authUserName = document.getElementById("auth-user-name") as HTMLElement;
-  const syncStatusEl = document.getElementById("sync-status") as HTMLElement;
-
-  function updateAuthUI(user: any) {
-    if (user) {
-      authBtn.classList.add("signed-in");
-      authBtn.setAttribute("aria-label", "Cloud sync settings");
-      authBtn.setAttribute("data-tooltip", "Signed in — cloud sync active");
-      authSignedOut.style.display = "none";
-      authSignedIn.style.display = "";
-      const name = user.user_metadata?.full_name || user.email || "Signed in";
-      const provider = user.app_metadata?.provider;
-      const providerIcons: Record<string, string> = {
-        discord:
-          '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px"><path d="M13.545 2.907a13.2 13.2 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.2 12.2 0 0 0-3.658 0 8 8 0 0 0-.412-.833.05.05 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.04.04 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032q.003.022.021.037a13.3 13.3 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019q.463-.63.818-1.329a.05.05 0 0 0-.01-.059l-.018-.011a9 9 0 0 1-1.248-.595.05.05 0 0 1-.02-.066l.015-.019q.127-.095.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.05.05 0 0 1 .053.007q.121.1.248.195a.05.05 0 0 1-.004.085 8 8 0 0 1-1.249.594.05.05 0 0 0-.03.03.05.05 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.2 13.2 0 0 0 4.001-2.02.05.05 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.03.03 0 0 0-.02-.019m-8.198 7.307c-.789 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612m5.316 0c-.788 0-1.438-.724-1.438-1.612s.637-1.613 1.438-1.613c.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612"/></svg>',
-        google:
-          '<svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:-2px"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>',
-      };
-      const icon = providerIcons[provider] || "";
-      authUserName.innerHTML = icon + (icon ? " " : "") + name;
-    } else {
-      authBtn.classList.remove("signed-in");
-      authBtn.setAttribute("aria-label", "Sign in for cloud sync");
-      authBtn.setAttribute(
-        "data-tooltip",
-        "Sign in to sync data across devices",
-      );
-      authSignedOut.style.display = "";
-      authSignedIn.style.display = "none";
-    }
-  }
-
-  function toggleAuth() {
-    if (authOverlay.style.display === "none") {
-      trackEvent("Auth opened");
-      authOverlay.style.display = "flex";
-    } else {
-      authOverlay.style.display = "none";
-    }
-  }
-  // authBtn.addEventListener("click", toggleAuth);
-  document.getElementById("auth-close")!.addEventListener("click", toggleAuth);
-  authOverlay.addEventListener("click", (e) => {
-    if (e.target === authOverlay) toggleAuth();
-  });
-
-  document.getElementById("auth-discord-btn")!.addEventListener("click", () => {
-    if (!sb) return;
-    trackEvent("Auth sign in", { provider: "discord" });
-    sb.auth.signInWithOAuth({
-      provider: "discord",
-      options: {
-        redirectTo: window.location.origin + consentPath,
-      },
-    });
-  });
-  document.getElementById("auth-google-btn")!.addEventListener("click", () => {
-    if (!sb) return;
-    trackEvent("Auth sign in", { provider: "google" });
-    sb.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + consentPath },
-    });
-  });
-  document
-    .getElementById("auth-signout-btn")!
-    .addEventListener("click", async () => {
-      if (!sb) return;
-      trackEvent("Auth sign out");
-      await sb.auth.signOut();
-      updateAuthUI(null);
-      toggleAuth();
-    });
 
   // --- Updates overlay ---
   const UPDATES_SEEN_KEY = "map-updates-last-seen-id";
@@ -2446,7 +2166,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         )
         .join("");
       localStorage.setItem(UPDATES_SEEN_KEY, String(UPDATES[0].id));
-      schedulePush();
       updatesDot.classList.remove("visible");
       updatesOverlay.style.display = "flex";
     } else {
@@ -2468,7 +2187,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   // let allHexIds: string[] = []; // populated after SVG load
   const hexPolys: Record<string, SVGPolygonElement> = {}; // hexId -> polygon element
   let activeHexShadow: SVGPolygonElement | null = null; // cloned polygon for drop shadow
-  let setLabelSize: ((size: number) => void) | null = null; // assigned after SVG load
   // let getLabelSize: (() => number) | null = null;
 
   // --- Visited hex persistence ---
@@ -2493,24 +2211,28 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   }
   // function saveVisited() {
   //   localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
-  //   schedulePush();
   // }
-  let visitedHexes = loadVisited();
+  const visitedHexes = loadVisited();
 
   // --- Shared DM notes ---
   async function deleteNote(hexId: string) {
-    if (sb) {
-      const { error } = await sb.from("hex_notes").delete().eq("hex_id", hexId);
-      if (error) {
-        console.warn("Shared note delete failed:", error.message);
-        return;
-      }
+    notesRevision++;
+    notesWrites++;
+    try {
+      if (D1_ENABLED) await d1Request(`/notes/${hexId}`, "DELETE");
+      applySharedNote(hexId, null);
+    } catch (error) {
+      console.warn("Shared note delete failed:", error);
+      alert("The note could not be deleted. Please try again.");
+    } finally {
+      notesWrites--;
+      notesRevision++;
     }
-    delete hexNotes[hexId];
-    updateNoteTextLabel(hexId);
-    updateNoteFill(hexId);
   }
-  let hexNotes: Record<string, SharedNote> = {};
+  const hexNotes: Record<string, SharedNote> = {};
+  let notesLoading = false;
+  let notesWrites = 0;
+  let notesRevision = 0;
   let notesEditMode = false;
   let svgDocRef: Document | null = null;
   let overlayRef: Element | null = null;
@@ -2633,176 +2355,54 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     updateNoteTextLabel(hexId);
     updateNoteFill(hexId);
     updateNoteBadge(hexId);
-    if (currentHex === hexId && sidebar.classList.contains("open")) {
+    if (
+      currentHex === hexId &&
+      sidebar.classList.contains("open") &&
+      !notesEditMode
+    ) {
       renderNotesSection(hexId);
     }
   }
 
   async function initSharedNotes() {
-    if (!sb) return;
-    const { data, error } = await sb
-      .from("hex_notes")
-      .select("hex_id, title, content, category");
-    if (error) {
-      console.warn("Shared notes load failed:", error.message);
-      return;
-    }
-    hexNotes = {};
-    for (const note of data ?? []) {
-      applySharedNote(note.hex_id, note.content, note.category, note.title);
-    }
-
-    sb.channel("shared-hex-notes")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "hex_notes" },
-        (payload: any) => {
-          const note =
-            payload.eventType === "DELETE" ? payload.old : payload.new;
-          if (note?.hex_id) {
-            applySharedNote(
-              note.hex_id,
-              payload.eventType === "DELETE" ? null : note.content,
-              note.category,
-              note.title,
-            );
-          }
-        },
-      )
-      .subscribe();
-  }
-
-  // --- Cloud sync (last-write-wins) ---
-  // On load: cloud replaces local state. On change: local overwrites cloud.
-  // No conflict resolution — designed for single user across devices.
-  function gatherSyncData() {
-    return {
-      visitedHexes: [...visitedHexes],
-      storePref: localStorage.getItem(STORE_PREF_KEY) || "",
-      lastSeenUpdateId:
-        parseInt(localStorage.getItem("map-updates-last-seen-id") ?? "", 10) ||
-        0,
-      labelSize:
-        parseInt(localStorage.getItem("map-label-size") ?? "", 10) ||
-        DEFAULT_LABEL_SIZE,
-    };
-  }
-
-  function schedulePush() {
-    if (!sb || isSyncing) return;
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(pushToCloud, 2000);
-  }
-
-  function mergeCloudData(cloud: any) {
-    // Cloud is source of truth for visited hexes
-    if (Array.isArray(cloud.visitedHexes)) {
-      visitedHexes = new Map(cloud.visitedHexes);
-      localStorage.setItem(VISITED_V2_KEY, JSON.stringify([...visitedHexes]));
-      reapplyAllVisitedOverlays();
-    }
-    // Scalar prefs: cloud wins
-    if (cloud.storePref !== undefined) {
-      localStorage.setItem(STORE_PREF_KEY, cloud.storePref);
-      updateAdventureListLinks();
-    }
-    if (cloud.lastSeenUpdateId) {
-      const localSeen =
-        parseInt(localStorage.getItem("map-updates-last-seen-id") ?? "", 10) ||
-        0;
-      if (cloud.lastSeenUpdateId > localSeen) {
-        localStorage.setItem(
-          "map-updates-last-seen-id",
-          String(cloud.lastSeenUpdateId),
-        );
-        // checkUpdatesBadge();
-      }
-    }
-    if (cloud.labelSize && setLabelSize) {
-      localStorage.setItem("map-label-size", String(cloud.labelSize));
-      setLabelSize(cloud.labelSize);
-    }
-  }
-
-  async function pushToCloud() {
-    if (!sb || isSyncing) return;
+    if (!D1_ENABLED || notesLoading || notesWrites) return;
+    notesLoading = true;
+    const revision = notesRevision;
     try {
-      const {
-        data: { user },
-      } = await sb.auth.getUser();
-      if (!user) return;
-      syncStatusEl.textContent = "Syncing...";
-      const { error } = await sb.from("map_user_data").upsert({
-        user_id: user.id,
-        data: gatherSyncData(),
-      });
-      if (error) {
-        console.warn("Cloud push failed:", error.message);
-        syncStatusEl.textContent = "Sync failed";
-      } else {
-        syncStatusEl.textContent = "Synced";
+      const data = (await d1Request("/notes")) as (SharedNote & {
+        hex_id: string;
+      })[];
+      if (revision !== notesRevision) return;
+      const ids = new Set(data.map((note) => note.hex_id));
+      for (const hexId of Object.keys(hexNotes)) {
+        if (!ids.has(hexId)) applySharedNote(hexId, null);
       }
-    } catch (err) {
-      console.warn("Cloud push error:", err);
-      syncStatusEl.textContent = "Sync failed";
+      for (const note of data) {
+        const previous = hexNotes[note.hex_id];
+        if (
+          previous?.title !== note.title ||
+          previous?.content !== note.content ||
+          previous?.category !== note.category
+        ) {
+          applySharedNote(note.hex_id, note.content, note.category, note.title);
+        }
+      }
+    } catch (error) {
+      console.warn("Shared notes load failed:", error);
+    } finally {
+      notesLoading = false;
     }
   }
 
-  function reapplyAllVisitedOverlays() {
-    // Clear existing overlays
-    Object.keys(visitedOverlays).forEach((hexId) => {
-      if (visitedOverlays[hexId]) {
-        visitedOverlays[hexId].remove();
-        delete visitedOverlays[hexId];
-      }
+  if (D1_ENABLED) {
+    void initSharedNotes();
+    setInterval(() => {
+      if (!document.hidden) void initSharedNotes();
+    }, 15000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) void initSharedNotes();
     });
-    // Reapply from current state
-    visitedHexes.forEach((state, hexId) => applyVisitedOverlay(hexId, state));
-    updateProgress();
   }
-
-  async function syncFromCloud(user: any) {
-    if (!sb || !user) return;
-    isSyncing = true;
-    syncStatusEl.textContent = "Syncing...";
-    try {
-      const { data, error } = await sb
-        .from("map_user_data")
-        .select("data")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (error) {
-        console.warn("Cloud pull failed:", error.message);
-        syncStatusEl.textContent = "Sync failed";
-        isSyncing = false;
-        return;
-      }
-      if (data && data.data) {
-        mergeCloudData(data.data);
-        syncStatusEl.textContent = "Synced";
-      } else {
-        // No cloud data yet - push local data up
-        await pushToCloud();
-      }
-    } catch (err) {
-      console.warn("Cloud sync error:", err);
-      syncStatusEl.textContent = "Sync failed";
-    }
-    isSyncing = false;
-  }
-
-  // Load Supabase asynchronously (skipped entirely when no project is configured;
-  // progress then stays in localStorage and the auth button is hidden)
-  if (SUPABASE_ENABLED) {
-    const s = document.createElement("script");
-    s.src =
-      "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
-    s.onload = initSupabase;
-    document.head.appendChild(s);
-  }
-  // } else {
-  //   authBtn.style.display = "none";
-  // }
 
   function updateProgress() {
     const { visited, partial } = countProgress(visitedHexes, HEX_PAGES);
@@ -3169,10 +2769,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   //     document.activeElement?.classList.contains("notes-textarea");
   //   const hasModifier = e.ctrlKey || e.metaKey || e.altKey;
   //   const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-  //   if (authOverlay.style.display !== "none") {
-  //     if (key === "Escape") toggleAuth();
-  //     return;
-  //   }
   //   if (updatesOverlay.style.display !== "none") {
   //     if (key === "Escape") toggleUpdates();
   //     return;
@@ -3191,10 +2787,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   //   }
   //   if (key === "?" && !inSearch && !inNotes && !hasModifier) {
   //     toggleHelp();
-  //     return;
-  //   }
-  //   if (key === "u" && !inSearch && !inNotes && !hasModifier) {
-  //     toggleAuth();
   //     return;
   //   }
   //   if (key === "c" && !inSearch && !inNotes && !hasModifier) {
@@ -3546,30 +3138,32 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       firstInvalidField?.setCustomValidity("");
       return;
     }
-    hexNotes[hexId] = { title, content: text, category };
-    updateNoteTextLabel(hexId);
-    updateNoteFill(hexId);
-    notesEditMode = false;
-    renderNotesSection(hexId);
-    updateNoteBadge(hexId);
-    if (sb) {
-      if (text) {
-        const { error } = await sb.from("hex_notes").upsert({
-          hex_id: hexId,
+    notesRevision++;
+    notesWrites++;
+    try {
+      if (D1_ENABLED) {
+        await d1Request(`/notes/${hexId}`, "PUT", {
           title,
           content: text,
           category,
-          updated_at: new Date().toISOString(),
         });
-        if (error) console.warn("Shared note save failed:", error.message);
-      } else {
-        const { error } = await sb
-          .from("hex_notes")
-          .delete()
-          .eq("hex_id", hexId);
-        if (error) console.warn("Shared note delete failed:", error.message);
       }
+    } catch (error) {
+      console.warn("Shared note save failed:", error);
+      alert("The note could not be saved. Please try again.");
+      return;
+    } finally {
+      notesWrites--;
+      notesRevision++;
     }
+    hexNotes[hexId] = { title, content: text, category };
+    updateNoteTextLabel(hexId);
+    updateNoteFill(hexId);
+    if (currentHex === hexId) {
+      notesEditMode = false;
+      renderNotesSection(hexId);
+    }
+    updateNoteBadge(hexId);
     trackEvent("Referee note saved", {
       hex: hexId,
       action: text ? "save" : "delete",
@@ -3943,7 +3537,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       const labelBgs: Array<{ rect: SVGRectElement; text: SVGTextElement }> =
         [];
       if (labels) {
-        let labelSize =
+        const labelSize =
           parseInt(localStorage.getItem("map-label-size") ?? "", 10) ||
           DEFAULT_LABEL_SIZE;
         labels.style.fontSize = labelSize + "px";
@@ -3982,13 +3576,6 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         }
         updateLabelBgs();
 
-        setLabelSize = function (size: number) {
-          labelSize = Math.max(12, Math.min(120, size));
-          labels.style.fontSize = labelSize + "px";
-          localStorage.setItem("map-label-size", String(labelSize));
-          schedulePush();
-          updateLabelBgs();
-        };
         // getLabelSize = function () {
         //   return labelSize;
         // };

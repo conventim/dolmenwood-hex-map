@@ -71,21 +71,18 @@ const privacyEmail = contactEmailWithTag("privacy");
   </style>
   <main>
     <h1>Privacy Policy</h1>
-    <p class="date">Last updated: February 22, 2026</p>
+    <p class="date">Last updated: October 8, 2026</p>
 
     <h2>What we collect</h2>
     <p>
-      When you sign in via Discord or Google on the Dolmenwood Hex Map, we
-      store:
+      No account or sign-in is required. Exploration progress and preferences
+      stay in your browser's local storage and are not uploaded to a server.
     </p>
-    <ul>
-      <li>Your account identifier (provided by Discord or Google)</li>
-      <li>Your display name and email (used to show who's signed in)</li>
-      <li>
-        Your map data: explored hexes, referee notes, and preferences — so you
-        can sync across devices
-      </li>
-    </ul>
+    <p>
+      Referee notes are shared publicly. Anyone can read, edit, or delete them,
+      including visitors who are not signed in. Do not include personal or
+      sensitive information in shared notes.
+    </p>
 
     <h2>What we don't collect</h2>
     <ul>
@@ -96,14 +93,15 @@ const privacyEmail = contactEmailWithTag("privacy");
 
     <h2>Where data is stored</h2>
     <p>
-      Map data is stored in a Supabase-hosted PostgreSQL database. Your data is
-      only accessible to your authenticated account via row-level security
-      policies.
+      Shared referee notes are stored in Cloudflare D1 and are public.
+      Exploration progress and preferences remain on your device. The map no
+      longer uses Supabase authentication or stores private user data remotely.
     </p>
 
     <h2>Data deletion</h2>
     <p>
-      You can stop using cloud sync at any time by signing out.{" "}
+      You can remove local progress and preferences by clearing this site's
+      browser storage. Shared notes can be deleted from the map.{" "}
       {
         privacyEmail ? (
           <>
