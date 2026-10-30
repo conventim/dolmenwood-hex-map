@@ -360,6 +360,18 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       font-weight: 600;
     }
 
+    .notes-buttons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .notes-header button img {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+
     .notes-header button {
       background: none;
       border: none;
@@ -1758,11 +1770,14 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     searchEntries,
   } from "../../lib/map/search";
   import { countProgress } from "../../lib/map/hex-nav";
+  import { isAvailableNoteCopyDestination } from "../../lib/map/note-copy";
   import {
     SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY,
     SUPABASE_ENABLED,
   } from "../../lib/config";
+
+  const NOTE_ICON_BASE = `${import.meta.env.BASE_URL}map/icons`;
 
   declare global {
     interface Window {
@@ -1922,6 +1937,14 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     title: string;
     content: string;
     category: NoteCategory;
+  }
+  interface NoteCopyState {
+    phase: "selecting" | "editing" | "saving" | "complete";
+    sourceHex: string;
+    sourceNote: SharedNote;
+    targetHex: string | null;
+    draft: SharedNote;
+    error: string | null;
   }
 
   // --- Search index ---
@@ -2215,7 +2238,10 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     try {
       if (SUPABASE_ENABLED) {
         if (!sb) throw new Error("Supabase is not ready");
-        const { error } = await sb.from("hex_notes").delete().eq("hex_id", hexId);
+        const { error } = await sb
+          .from("hex_notes")
+          .delete()
+          .eq("hex_id", hexId);
         if (error) throw error;
       }
       applySharedNote(hexId, null);
@@ -2232,12 +2258,93 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   let notesWrites = 0;
   let notesRevision = 0;
   let notesEditMode = false;
+  let noteCopyState: NoteCopyState | null = null;
   let svgDocRef: Document | null = null;
   let overlayRef: Element | null = null;
   let noteLabelGroup: SVGGElement | null = null;
   const noteLabels: Record<string, SVGTextElement> = {};
   let noteFillGroup: SVGGElement | null = null;
   const noteFills: Record<string, SVGPolygonElement> = {};
+
+  function refreshCopyTargetAvailability() {
+    const selecting = noteCopyState?.phase === "selecting";
+    for (const [hexId, poly] of Object.entries(hexPolys)) {
+      const disabled =
+        selecting &&
+        !isAvailableNoteCopyDestination(
+          noteCopyState!.sourceHex,
+          hexId,
+          hexNotes,
+        );
+      poly.classList.toggle("copy-target-disabled", Boolean(disabled));
+      poly.classList.toggle(
+        "copy-target-available",
+        Boolean(selecting && !disabled),
+      );
+      poly.style.pointerEvents = disabled ? "none" : "";
+    }
+  }
+
+  function clearNoteCopyState() {
+    noteCopyState = null;
+    notesEditMode = false;
+    refreshCopyTargetAvailability();
+  }
+
+  function sameNote(a: SharedNote | undefined, b: SharedNote) {
+    return (
+      a?.title === b.title &&
+      a.content === b.content &&
+      a.category === b.category
+    );
+  }
+
+  function startNoteCopy(sourceHex: string) {
+    const sourceNote = hexNotes[sourceHex];
+    if (!sourceNote) return;
+    noteCopyState = {
+      phase: "selecting",
+      sourceHex,
+      sourceNote: { ...sourceNote },
+      targetHex: null,
+      draft: { ...sourceNote },
+      error: null,
+    };
+    refreshCopyTargetAvailability();
+    renderNotesSection(sourceHex);
+    trackEvent("Referee note copy started", { hex: sourceHex });
+  }
+
+  function cancelNoteCopy() {
+    const sourceHex = noteCopyState?.sourceHex;
+    if (noteCopyState?.phase === "saving") return;
+    clearNoteCopyState();
+    if (sourceHex && currentHex !== sourceHex) {
+      selectHex(sourceHex);
+      openSidebar(sourceHex, { skipTracking: true });
+    } else if (sourceHex && sidebar.classList.contains("open")) {
+      renderNotesSection(sourceHex);
+    }
+  }
+
+  function handleCopySourceUpdate(hexId: string) {
+    if (
+      !noteCopyState ||
+      noteCopyState.sourceHex !== hexId ||
+      noteCopyState.phase === "saving"
+    ) {
+      return;
+    }
+    if (!sameNote(hexNotes[hexId], noteCopyState.sourceNote)) {
+      clearNoteCopyState();
+      if (sidebar.classList.contains("open") && currentHex) {
+        openSidebar(currentHex, { skipTracking: true });
+      }
+      alert(
+        "The source note changed or was removed. Note copying was canceled.",
+      );
+    }
+  }
 
   function updateNoteTextLabel(hexId: string) {
     const existing = noteLabels[hexId];
@@ -2350,6 +2457,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         category: safeCategory,
       };
     else delete hexNotes[hexId];
+    refreshCopyTargetAvailability();
+    handleCopySourceUpdate(hexId);
     updateNoteTextLabel(hexId);
     updateNoteFill(hexId);
     updateNoteBadge(hexId);
@@ -2400,13 +2509,17 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
     script.onload = () => {
       if (!window.supabase) return;
-      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false,
+      sb = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
         },
-      });
+      );
       sb.channel("shared-hex-notes")
         .on(
           "postgres_changes",
@@ -2427,7 +2540,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     const progressEl = document.getElementById("hex-progress") as HTMLElement;
     if (visited === 0 && partial === 0) {
       progressEl.style.display = "none";
-      return;
+      return false;
     }
     const parts: string[] = [];
     if (visited > 0) parts.push(`${visited} fully explored`);
@@ -2513,7 +2626,30 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   //   ArrowDown: [0, 1],
   // };
 
-  function selectHex(hexId: string) {
+  function selectHex(hexId: string): boolean {
+    if (noteCopyState?.phase === "selecting") {
+      if (
+        !isAvailableNoteCopyDestination(
+          noteCopyState.sourceHex,
+          hexId,
+          hexNotes,
+        )
+      ) {
+        return false;
+      }
+      noteCopyState.phase = "editing";
+      noteCopyState.targetHex = hexId;
+      noteCopyState.error = null;
+      refreshCopyTargetAvailability();
+    } else if (
+      noteCopyState?.phase === "editing" ||
+      noteCopyState?.phase === "saving"
+    ) {
+      return false;
+    } else if (noteCopyState?.phase === "complete") {
+      clearNoteCopyState();
+    }
+
     // Clear previous active hex outline
     if (currentHex && hexPolys[currentHex]) {
       hexPolys[currentHex].style.stroke = "";
@@ -2541,6 +2677,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     if (hexId && sidebar.classList.contains("open")) {
       openSidebar(hexId, { skipTracking: true });
     }
+    return true;
   }
 
   // function doNavigateHex(dcol: number, drow: number) {
@@ -2776,7 +2913,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       }
       return;
     }
-    if (hexPolys[entry.hexId]) selectHex(entry.hexId);
+    if (hexPolys[entry.hexId] && !selectHex(entry.hexId)) return;
     openSidebar(entry.hexId);
   }
 
@@ -2906,6 +3043,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   // }
 
   function closeSidebar() {
+    if (noteCopyState?.phase === "saving") {
+      sidebar.style.transform = "";
+      return;
+    }
+    if (noteCopyState) clearNoteCopyState();
     sidebar.classList.remove("open");
     document.body.classList.remove("sidebar-open");
     sidebar.style.transform = "";
@@ -3032,15 +3174,94 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   }
 
   function renderNotesSection(hexId: string) {
-    if (notesEditMode) {
-      const existingTitle = hexNotes[hexId]?.title || "";
-      const existing = hexNotes[hexId]?.content || "";
-      const category = hexNotes[hexId]?.category || "news";
+    if (
+      noteCopyState?.phase === "selecting" &&
+      noteCopyState.sourceHex === hexId
+    ) {
+      const sourceNote = noteCopyState.sourceNote;
       sidebarNotes.innerHTML = `
         <div class="notes-section">
-          <div class="notes-header"><h3>Referee Notes</h3></div>
+          <div class="notes-header"><h3>Copy referee note</h3></div>
+          <p>Select an empty hex on the map as the destination.</p>
+          <div class="notes-actions">
+            <button type="button" data-action="cancel-copy">Cancel copy</button>
+          </div>
+          <div class="notes-category-view">
+            <span class="notes-category-swatch" style="background-color: ${NOTE_CATEGORY_COLORS[sourceNote.category]}" aria-hidden="true"></span>
+            <span>${NOTE_CATEGORY_LABELS[sourceNote.category]}</span>
+          </div>
+          <div class="notes-title-view">${sourceNote.title}</div>
+          <div class="notes-view">${renderMarkdown(sourceNote.content)}</div>
+        </div>`;
+      sidebarNotes
+        .querySelector('[data-action="cancel-copy"]')!
+        .addEventListener("click", cancelNoteCopy);
+      return;
+    }
+
+    if (
+      noteCopyState?.phase === "complete" &&
+      noteCopyState.targetHex === hexId
+    ) {
+      const copiedNote = hexNotes[hexId];
+      if (!copiedNote) {
+        clearNoteCopyState();
+        renderNotesSection(hexId);
+        return;
+      }
+      sidebarNotes.innerHTML = `
+        <div class="notes-section">
+          <p role="status">Note copied to hex ${hexId}.</p>
+          <div class="notes-category-view">
+            <span class="notes-category-swatch" style="background-color: ${NOTE_CATEGORY_COLORS[copiedNote.category]}" aria-hidden="true"></span>
+            <span>${NOTE_CATEGORY_LABELS[copiedNote.category]}</span>
+          </div>
+          <div class="notes-title-view">${copiedNote.title}</div>
+          <div class="notes-view">${renderMarkdown(copiedNote.content)}</div>
+          <div class="notes-actions">
+            <button type="button" data-action="finish-copy">Done</button>
+          </div>
+        </div>`;
+      sidebarNotes
+        .querySelector('[data-action="finish-copy"]')!
+        .addEventListener("click", () => {
+          clearNoteCopyState();
+          renderNotesSection(hexId);
+        });
+      return;
+    }
+
+    const copyState =
+      noteCopyState?.phase === "editing" && noteCopyState.targetHex === hexId
+        ? noteCopyState
+        : null;
+    const isCopyEditing = copyState !== null;
+    if (copyState) notesEditMode = true;
+
+    if (notesEditMode || isCopyEditing) {
+      const existingTitle = copyState
+        ? copyState.draft.title
+        : hexNotes[hexId]?.title || "";
+      const existing = copyState
+        ? copyState.draft.content
+        : hexNotes[hexId]?.content || "";
+      const category = copyState
+        ? copyState.draft.category
+        : hexNotes[hexId]?.category || "news";
+      const escapeField = (value: string) =>
+        value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      sidebarNotes.innerHTML = `
+        <div class="notes-section">
+          <div class="notes-header"><h3>${isCopyEditing ? `Copy note to hex ${hexId}` : "Referee Notes"}</h3></div>
+          ${copyState ? `<p>Editing a copy of the note from hex ${copyState.sourceHex}. The original note will not be changed.</p>` : ""}
+          ${copyState?.error ? `<p role="alert" data-copy-error>${escapeField(copyState.error)}</p>` : '<p role="alert" data-copy-error style="display:none"></p>'}
           <label class="notes-title-label" for="notes-title">Title *</label>
-          <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${existingTitle.replace(/"/g, "&quot;")}" placeholder="Note title" required />
+          <input class="notes-title" id="notes-title" type="text" maxlength="200" value="${escapeField(existingTitle)}" placeholder="Note title" required />
           <label class="notes-category-label" for="notes-category">Category</label>
           <select class="notes-category" id="notes-category">
             <option value="explored">Esplorato</option>
@@ -3052,11 +3273,11 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
             <span class="notes-color-swatch" aria-hidden="true"></span>
           </div>
           <label class="notes-title-label" for="notes-text">Text *</label>
-          <textarea class="notes-textarea" id="notes-text" placeholder="Write your notes here..." required>${existing.replace(/</g, "&lt;")}</textarea>
+          <textarea class="notes-textarea" id="notes-text" maxlength="10000" placeholder="Write your notes here..." required>${escapeField(existing)}</textarea>
           <div class="notes-hint">Markdown supported</div>
           <div class="notes-actions">
-            <button data-action="save">Save</button>
-            <button data-action="cancel">Cancel</button>
+            <button data-action="save">${isCopyEditing ? "Save copy" : "Save"}</button>
+            <button data-action="cancel">${isCopyEditing ? "Cancel copy" : "Cancel"}</button>
           </div>
         </div>`;
       const textarea = sidebarNotes.querySelector(
@@ -3075,6 +3296,22 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       };
       categorySelect.addEventListener("change", updateCategoryColor);
       updateCategoryColor();
+      if (copyState) {
+        const syncCopyDraft = () => {
+          if (noteCopyState !== copyState) return;
+          copyState.draft = {
+            title: titleInput.value,
+            content: textarea.value,
+            category: categorySelect.value as NoteCategory,
+          };
+        };
+        const titleInput = sidebarNotes.querySelector(
+          ".notes-title",
+        ) as HTMLInputElement;
+        titleInput.addEventListener("input", syncCopyDraft);
+        textarea.addEventListener("input", syncCopyDraft);
+        categorySelect.addEventListener("change", syncCopyDraft);
+      }
       textarea.focus();
       textarea.addEventListener("keydown", (e: KeyboardEvent) => {
         if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -3098,8 +3335,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           <div class="notes-header">
             <h3>Referee Notes</h3>
             <div class="notes-buttons">
-              <button class="notes-edit-btn" aria-label="Edit notes" title="Edit notes">&#9998;</button>
-              <button class="notes-delete-btn" aria-label="Delete notes" title="Delete notes">&#128465;</button>
+              <button class="notes-edit-btn" aria-label="Edit notes" title="Edit notes"><img src="${NOTE_ICON_BASE}/note-edit.svg" alt="" /></button>
+              <button class="notes-copy-btn" data-action="copy-note" type="button" aria-label="Copy note" title="Copy note"><img src="${NOTE_ICON_BASE}/note-copy.svg" alt="" /></button>
+              <button class="notes-delete-btn" aria-label="Delete notes" title="Delete notes"><img src="${NOTE_ICON_BASE}/note-delete.svg" alt="" /></button>
             </div>
           </div>
           <div class="notes-category-view">
@@ -3119,6 +3357,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       sidebarNotes
         .querySelector(".notes-delete-btn")!
         .addEventListener("click", () => openDeleteNoteConfirmation(hexId));
+      sidebarNotes
+        .querySelector('[data-action="copy-note"]')!
+        .addEventListener("click", () => startNoteCopy(hexId));
     } else {
       sidebarNotes.innerHTML = `
         <div class="notes-section">
@@ -3134,7 +3375,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     }
   }
 
-  async function saveNote(hexId: string) {
+  function readAndValidateNoteForm(): SharedNote | null {
     const textarea = sidebarNotes.querySelector(
       ".notes-textarea",
     ) as HTMLTextAreaElement | null;
@@ -3154,8 +3395,124 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       );
       firstInvalidField?.reportValidity();
       firstInvalidField?.setCustomValidity("");
+      return null;
+    }
+    return { title, content: text, category };
+  }
+
+  async function saveCopiedNote(hexId: string) {
+    const state = noteCopyState;
+    if (!state || state.phase !== "editing" || state.targetHex !== hexId) {
       return;
     }
+    const draft = readAndValidateNoteForm();
+    if (!draft) return;
+    state.draft = draft;
+    state.error = null;
+    state.phase = "saving";
+    const saveButton = sidebarNotes.querySelector(
+      '[data-action="save"]',
+    ) as HTMLButtonElement | null;
+    const cancelButton = sidebarNotes.querySelector(
+      '[data-action="cancel"]',
+    ) as HTMLButtonElement | null;
+    const errorEl = sidebarNotes.querySelector(
+      "[data-copy-error]",
+    ) as HTMLElement | null;
+    const sidebarCloseButton = document.getElementById(
+      "sidebar-close",
+    ) as HTMLButtonElement;
+    if (saveButton) saveButton.disabled = true;
+    if (cancelButton) cancelButton.disabled = true;
+    sidebarCloseButton.disabled = true;
+    notesRevision++;
+    notesWrites++;
+    try {
+      if (SUPABASE_ENABLED) {
+        if (!sb) throw new Error("Supabase is not ready");
+        const { data: source, error: sourceError } = await sb
+          .from("hex_notes")
+          .select("hex_id, title, content, category")
+          .eq("hex_id", state.sourceHex)
+          .maybeSingle();
+        if (sourceError) throw sourceError;
+        if (!source || !sameNote(source, state.sourceNote)) {
+          throw new Error(
+            "The source note changed or is no longer available. Cancel and restart the copy.",
+          );
+        }
+
+        const { data: destination, error: destinationError } = await sb
+          .from("hex_notes")
+          .select("hex_id")
+          .eq("hex_id", hexId)
+          .maybeSingle();
+        if (destinationError) throw destinationError;
+        if (
+          destination ||
+          !isAvailableNoteCopyDestination(state.sourceHex, hexId, hexNotes)
+        ) {
+          throw new Error(
+            "This destination already has a note. Cancel and choose another empty hex.",
+          );
+        }
+
+        const { error } = await sb.from("hex_notes").insert({
+          hex_id: hexId,
+          title: draft.title,
+          content: draft.content,
+          category: draft.category,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+      } else if (
+        !isAvailableNoteCopyDestination(state.sourceHex, hexId, hexNotes)
+      ) {
+        throw new Error(
+          "This destination already has a note. Cancel and choose another empty hex.",
+        );
+      }
+
+      applySharedNote(hexId, draft.content, draft.category, draft.title);
+      state.phase = "complete";
+      sidebarCloseButton.disabled = false;
+      renderNotesSection(hexId);
+      updateNoteBadge(hexId);
+      trackEvent("Referee note copied", {
+        sourceHex: state.sourceHex,
+        hex: hexId,
+      });
+    } catch (error) {
+      console.warn("Shared note copy failed:", error);
+      state.phase = "editing";
+      state.error =
+        error instanceof Error
+          ? error.message
+          : "The note could not be copied. Please try again.";
+      if (errorEl) {
+        errorEl.textContent = state.error;
+        errorEl.style.display = "";
+      }
+      if (saveButton) saveButton.disabled = false;
+      if (cancelButton) cancelButton.disabled = false;
+      sidebarCloseButton.disabled = false;
+    } finally {
+      notesWrites--;
+      notesRevision++;
+    }
+  }
+
+  async function saveNote(hexId: string) {
+    if (
+      noteCopyState?.phase === "editing" &&
+      noteCopyState.targetHex === hexId
+    ) {
+      await saveCopiedNote(hexId);
+      return;
+    }
+    const note = readAndValidateNoteForm();
+    if (!note) return;
+    const { title, content: text, category } = note;
     notesRevision++;
     notesWrites++;
     try {
@@ -3179,6 +3536,8 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       notesRevision++;
     }
     hexNotes[hexId] = { title, content: text, category };
+    refreshCopyTargetAvailability();
+    handleCopySourceUpdate(hexId);
     updateNoteTextLabel(hexId);
     updateNoteFill(hexId);
     if (currentHex === hexId) {
@@ -3193,11 +3552,24 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
   }
 
   function cancelNoteEdit(hexId: string) {
+    if (noteCopyState) {
+      cancelNoteCopy();
+      return;
+    }
     notesEditMode = false;
     renderNotesSection(hexId);
   }
 
   function openSidebar(hexId: string, { skipTracking = false } = {}) {
+    if (
+      (noteCopyState?.phase === "selecting" &&
+        hexId !== noteCopyState.sourceHex) ||
+      ((noteCopyState?.phase === "editing" ||
+        noteCopyState?.phase === "saving") &&
+        hexId !== noteCopyState.targetHex)
+    ) {
+      return false;
+    }
     if (!skipTracking) trackEvent("Hex opened", { hex: hexId });
     // sidebarTitle.innerHTML =
     //   hexId +
@@ -3290,7 +3662,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     const match = location.hash.match(/^#hex=(\d{4})$/);
     if (match) {
       if (isInitial) trackEvent("Deep link arrival", { hex: match[1] });
-      selectHex(match[1]);
+      if (!selectHex(match[1])) return;
       openSidebar(match[1]);
     }
   }
@@ -3327,6 +3699,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         "style",
       );
       hoverStyle.textContent = `.hex-overlay polygon{pointer-events:all;cursor:pointer}.hex-overlay polygon:hover{fill:${HOVER_FILL};fill-opacity:1}.visited-hatch{pointer-events:none;fill:url(#crosshatch-visited);fill-opacity:1}.partial-hatch{pointer-events:none;fill:url(#stipple-partial);fill-opacity:1}`;
+      hoverStyle.textContent += `.hex-overlay polygon.copy-target-available{stroke:#2d6a4f;stroke-width:10}.hex-overlay polygon.copy-target-available:hover{fill:rgba(45,106,79,0.5);fill-opacity:1}.hex-overlay polygon.copy-target-disabled{filter:grayscale(1);opacity:.4;cursor:not-allowed}`;
       svgRoot.prepend(hoverStyle);
 
       // Create SVG filters (native SVG <filter> for Safari compatibility).
@@ -3796,6 +4169,7 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         };
         poly.addEventListener("mouseenter", showTooltip);
         poly.addEventListener("pointerup", (e) => {
+          if (noteCopyState?.phase === "selecting") return;
           if ((e as PointerEvent).pointerType === "touch") {
             if (touchGestureMoved) return;
             if (!hexNotes[hexId]) {
@@ -3827,15 +4201,19 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
             e.preventDefault();
             return;
           }
-          if (mobileTooltipHex === hexId) {
+          if (
+            mobileTooltipHex === hexId &&
+            noteCopyState?.phase !== "selecting"
+          ) {
             e.preventDefault();
             return;
           }
           tooltip.style.display = "none";
-          selectHex(hexId);
+          if (!selectHex(hexId)) return;
           openSidebar(hexId);
         });
       });
+      refreshCopyTargetAvailability();
       // allHexIds = Object.keys(hexPolys).sort();
 
       noteLabelGroup = svgDoc.createElementNS(

@@ -13,7 +13,7 @@ Live at **https://dolmenwood.youwillnevergotospace.com/**
 - Points of interest and Dolmenwood Campaign Book page references per hex
 - Full-text search across hexes, modules, and points of interest
 - Exploration tracking (unvisited / partially explored / fully explored) stored in localStorage
-- Per-hex referee notes with a small markdown renderer
+- Per-hex referee notes with a small markdown renderer; copy notes to empty hexes
 - Public shared referee notes stored in Supabase, updated through Realtime
 - Update feed so returning visitors can see what changed
 

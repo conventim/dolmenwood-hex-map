@@ -4,6 +4,7 @@ import {
   nextVisitedState,
   countProgress,
 } from "../../src/lib/map/hex-nav";
+import { isAvailableNoteCopyDestination } from "../../src/lib/map/note-copy";
 
 const validHexIds = new Set(["0101", "0102", "0201", "0202", "0301", "1010"]);
 
@@ -81,5 +82,27 @@ describe("countProgress", () => {
       visited: 0,
       partial: 0,
     });
+  });
+});
+
+describe("isAvailableNoteCopyDestination", () => {
+  const notesByHex = {
+    "0101": { title: "Source" },
+    "0102": { title: "Existing" },
+  };
+
+  it("allows an empty destination other than the source", () => {
+    expect(isAvailableNoteCopyDestination("0101", "0201", notesByHex)).toBe(
+      true,
+    );
+  });
+
+  it("rejects the source hex and any hex that already has a note", () => {
+    expect(isAvailableNoteCopyDestination("0101", "0101", notesByHex)).toBe(
+      false,
+    );
+    expect(isAvailableNoteCopyDestination("0101", "0102", notesByHex)).toBe(
+      false,
+    );
   });
 });
