@@ -1467,8 +1467,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         data={`${import.meta.env.BASE_URL}map/map.svg`}
         type="image/svg+xml"
         aria-label="Interactive hex map of Dolmenwood"
-        >Dolmenwood hex map</object
       >
+        Dolmenwood hex map
+      </object>
       <!-- <div id="adventure-list">
         <h2>Modules</h2>
         {
@@ -1588,28 +1589,53 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     <div id="help-box" class="modal-box">
       <h3>Keyboard Shortcuts</h3>
       <dl>
-        <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / Arrows</dt><dd>
-          Navigate hexes
-        </dd>
-        <dt><kbd>Enter</kbd></dt><dd>Open sidebar</dd>
-        <dt><kbd>V</kbd></dt><dd>
-          Cycle hex: partially explored → fully explored → clear
-        </dd>
-        <dt><kbd>N</kbd></dt><dd>
-          Edit / save Referee notes (when sidebar open)
-        </dd>
-        <dt><kbd>F</kbd> / <kbd>/</kbd></dt><dd>Focus search</dd>
-        <dt><kbd>-</kbd> / <kbd>+</kbd> / <kbd>0</kbd></dt><dd>
-          Hex label size
-        </dd>
-        <dt><kbd>Esc</kbd></dt><dd>Close sidebar / clear search</dd>
-        <dt><kbd>C</kbd></dt><dd>Preferences</dd>
-        <dt><kbd>U</kbd></dt><dd>Sign in / cloud sync</dd>
-        <dt><kbd>?</kbd></dt><dd>Toggle this help</dd>
+        <dt>
+          <kbd>W</kbd>
+          <kbd>A</kbd>
+          <kbd>S</kbd>
+          <kbd>D</kbd> / Arrows
+        </dt>
+        <dd>Navigate hexes</dd>
+        <dt>
+          <kbd>Enter</kbd>
+        </dt>
+        <dd>Open sidebar</dd>
+        <dt>
+          <kbd>V</kbd>
+        </dt>
+        <dd>Cycle hex: partially explored → fully explored → clear</dd>
+        <dt>
+          <kbd>N</kbd>
+        </dt>
+        <dd>Edit / save Referee notes (when sidebar open)</dd>
+        <dt>
+          <kbd>F</kbd> / <kbd>/</kbd>
+        </dt>
+        <dd>Focus search</dd>
+        <dt>
+          <kbd>-</kbd> / <kbd>+</kbd> / <kbd>0</kbd>
+        </dt>
+        <dd>Hex label size</dd>
+        <dt>
+          <kbd>Esc</kbd>
+        </dt>
+        <dd>Close sidebar / clear search</dd>
+        <dt>
+          <kbd>C</kbd>
+        </dt>
+        <dd>Preferences</dd>
+        <dt>
+          <kbd>U</kbd>
+        </dt>
+        <dd>Sign in / cloud sync</dd>
+        <dt>
+          <kbd>?</kbd>
+        </dt>
+        <dd>Toggle this help</dd>
       </dl>
-      <button id="help-close" class="modal-close" aria-label="Close help"
-        >&times;</button
-      >
+      <button id="help-close" class="modal-close" aria-label="Close help">
+        &times;
+      </button>
     </div>
   </div>
   <div id="delete-note-overlay" class="modal-overlay" style="display:none">
@@ -1623,8 +1649,12 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
       <h3 id="delete-note-title">Delete note?</h3>
       <p>This action cannot be undone.</p>
       <div class="delete-note-actions">
-        <button id="delete-note-cancel" type="button">No</button>
-        <button id="delete-note-confirm" type="button">Yes, delete</button>
+        <button id="delete-note-cancel" type="button">
+          No
+        </button>
+        <button id="delete-note-confirm" type="button">
+          Yes, delete
+        </button>
       </div>
     </div>
   </div>
@@ -1655,9 +1685,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     <div id="updates-box" class="modal-box">
       <h3>Updates</h3>
       <div id="updates-content"></div>
-      <button id="updates-close" class="modal-close" aria-label="Close updates"
-        >&times;</button
-      >
+      <button id="updates-close" class="modal-close" aria-label="Close updates">
+        &times;
+      </button>
     </div>
   </div>
   <div id="config-overlay" class="modal-overlay" style="display:none">
@@ -1669,28 +1699,30 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
           module title.
         </p>
         <div class="segmented">
-          <label
-            ><input type="radio" name="store-pref" value="itch" /><span
-              >itch.io</span
-            ></label
-          >
-          <label
-            ><input type="radio" name="store-pref" value="drivethrurpg" /><span
-              >DriveThruRPG</span
-            ></label
-          >
-          <label
-            ><input type="radio" name="store-pref" value="" /><span>None</span
-            ></label
-          >
+          <label>
+            <input type="radio" name="store-pref" value="itch" />
+            <span>itch.io</span>
+          </label>
+          <label>
+            <input type="radio" name="store-pref" value="drivethrurpg" />
+            <span>DriveThruRPG</span>
+          </label>
+          <label>
+            <input type="radio" name="store-pref" value="" />
+            <span>None</span>
+          </label>
         </div>
       </fieldset>
-      <button id="config-save" class="btn-primary">Save</button>
+      <button id="config-save" class="btn-primary">
+        Save
+      </button>
       <button
         id="config-close"
         class="modal-close"
-        aria-label="Close preferences">&times;</button
+        aria-label="Close preferences"
       >
+        &times;
+      </button>
     </div>
   </div>
   <div id="contact-overlay" class="modal-overlay" style="display:none">
@@ -1701,27 +1733,25 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
         placement or description? Have a suggestion, complaint, or just want to
         say hi?
       </p>
-      {
-        contactMailto && (
-          <p class="contact-cta">
-            <a
-              class="btn-primary"
-              href={`mailto:${contactMailto}`}
-              target="_blank"
-            >
-              Send an email
-            </a>
-          </p>
-        )
-      }
+      {contactMailto && (
+        <p class="contact-cta">
+          <a
+            class="btn-primary"
+            href={`mailto:${contactMailto}`}
+            target="_blank"
+          >
+            Send an email
+          </a>
+        </p>
+      )}
 
       <p class="contact-disclaimer">
         This is a fan project, not affiliated with Necrotic Gnome. I'm just
         trying to help people enjoy the world of Dolmenwood.
       </p>
-      <button id="contact-close" class="modal-close" aria-label="Close contact"
-        >&times;</button
-      >
+      <button id="contact-close" class="modal-close" aria-label="Close contact">
+        &times;
+      </button>
     </div>
   </div>
   <div id="tooltip"></div>
@@ -1730,7 +1760,9 @@ const contactMailto = contactEmailWithTag("dolmenwood-map");
     <div id="sidebar-header">
       <div class="header-row">
         <h2 id="sidebar-title">Hex Details</h2>
-        <button id="sidebar-close" aria-label="Close sidebar">&times;</button>
+        <button id="sidebar-close" aria-label="Close sidebar">
+          &times;
+        </button>
       </div>
       <div id="sidebar-pois"></div>
       <div id="sidebar-exploration"></div>

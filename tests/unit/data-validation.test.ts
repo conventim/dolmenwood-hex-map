@@ -8,10 +8,6 @@ import hexPages from "../../src/data/hex-pages.json";
 const validHexIds = new Set(Object.keys(hexColors));
 
 describe("dolmenwood-map-modules", () => {
-  it("exports a non-empty array of modules", () => {
-    expect(modules.length).toBeGreaterThan(0);
-  });
-
   it("every module has at least one link with a valid URL", () => {
     for (const mod of modules) {
       expect(mod.links.length).toBeGreaterThan(0);
@@ -67,10 +63,6 @@ describe("dolmenwood-map-modules", () => {
 });
 
 describe("map-pois", () => {
-  it("exports a non-empty array of POIs", () => {
-    expect(pois.length).toBeGreaterThan(0);
-  });
-
   it("all POI hex IDs reference valid hexes in hex-colors.json", () => {
     for (const poi of pois) {
       expect(

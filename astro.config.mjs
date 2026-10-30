@@ -1,4 +1,5 @@
 // @ts-check
+import process from "node:process";
 import { defineConfig } from "astro/config";
 
 // Rewrite /dir/ to /dir/index.html for static files in public/

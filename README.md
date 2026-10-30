@@ -33,14 +33,14 @@ make dev               # http://localhost:4321/map/
 
 Site configuration is via `PUBLIC_*` env vars (see `.env.example`). Everything is optional: without configuration, progress stays in localStorage, referee notes are session-only, and analytics and contact links are disabled. Use only a Supabase publishable/anon key in the browser, never a service-role or secret key.
 
-| Variable                  | Purpose                                                             | When unset                    |
-| ------------------------- | ------------------------------------------------------------------- | ----------------------------- |
-| `PUBLIC_SITE_URL`         | Absolute origin for building `og:image` URLs                        | og:image tags omitted         |
-| `PUBLIC_CANONICAL_URL`    | Canonical URL for the map page                                      | no canonical tag              |
-| `PUBLIC_ANALYTICS_DOMAIN` | Domain registered with [OneDollarStats](https://onedollarstats.com) | analytics disabled            |
-| `PUBLIC_SUPABASE_URL`       | Supabase project URL for shared notes                              | shared notes are session-only |
-| `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable/anon key                                | shared notes are session-only |
-| `PUBLIC_CONTACT_EMAIL`    | Contact email (plus-tags added automatically)                       | contact links not rendered    |
+| Variable                          | Purpose                                                             | When unset                    |
+| --------------------------------- | ------------------------------------------------------------------- | ----------------------------- |
+| `PUBLIC_SITE_URL`                 | Absolute origin for building `og:image` URLs                        | og:image tags omitted         |
+| `PUBLIC_CANONICAL_URL`            | Canonical URL for the map page                                      | no canonical tag              |
+| `PUBLIC_ANALYTICS_DOMAIN`         | Domain registered with [OneDollarStats](https://onedollarstats.com) | analytics disabled            |
+| `PUBLIC_SUPABASE_URL`             | Supabase project URL for shared notes                               | shared notes are session-only |
+| `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable/anon key                                       | shared notes are session-only |
+| `PUBLIC_CONTACT_EMAIL`            | Contact email (plus-tags added automatically)                       | contact links not rendered    |
 
 ### Supabase setup
 

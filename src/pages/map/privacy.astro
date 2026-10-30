@@ -103,30 +103,26 @@ const privacyEmail = contactEmailWithTag("privacy");
     <p>
       You can remove local progress and preferences by clearing this site's
       browser storage. Shared notes can be deleted from the map.{" "}
-      {
-        privacyEmail ? (
-          <>
-            To request deletion of your data, email{" "}
-            <a href={`mailto:${privacyEmail}`}>{privacyEmail}</a>.
-          </>
-        ) : (
-          <>To request deletion of your data, contact the site operator.</>
-        )
-      }
+      {privacyEmail ? (
+        <>
+          To request deletion of your data, email{" "}
+          <a href={`mailto:${privacyEmail}`}>{privacyEmail}</a>.
+        </>
+      ) : (
+        <>To request deletion of your data, contact the site operator.</>
+      )}
     </p>
 
-    {
-      ANALYTICS_DOMAIN && (
-        <>
-          <h2>Analytics</h2>
-          <p>
-            We use <a href="https://onedollarstats.com">OneDollarStats</a> for
-            anonymous, cookie-free page view analytics. No personal information
-            is collected by the analytics service.
-          </p>
-        </>
-      )
-    }
+    {ANALYTICS_DOMAIN && (
+      <>
+        <h2>Analytics</h2>
+        <p>
+          We use <a href="https://onedollarstats.com">OneDollarStats</a> for
+          anonymous, cookie-free page view analytics. No personal information is
+          collected by the analytics service.
+        </p>
+      </>
+    )}
 
     <p class="back">
       <a href="./">&larr; Back to the map</a>
